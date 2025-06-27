@@ -1,9 +1,5 @@
 import sys
 import os
-from dotenv import load_dotenv
-load_dotenv()
-os.chdir(os.getenv("PROJECT_DIRECTORY"))
-sys.path.append(os.getenv("PROJECT_DIRECTORY"))
 
 from langchain.prompts import PromptTemplate
 from openai import OpenAI
@@ -27,7 +23,10 @@ def translateString(stringToTranslate: str, targetLanguage: str) -> str:
         str: The translated string, or an empty string if translation fails.
     """
     # Initialize the OpenAI client
-    llmClient = OpenAI()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    llmClient = OpenAI(api_key=api_key)
 
     # Load the translation prompt template from file
     with open("prompts/translateString.txt", "r", encoding="utf-8") as file:
@@ -270,7 +269,10 @@ def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world
     Returns:
         dict: A dictionary with keys 'description' and 'industry'.
     """
-    clientOpenai = OpenAI()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    clientOpenai = OpenAI(api_key=api_key)
     brandDescription = getBrandDescription(clientOpenai, brandName, brandWebsite, brandCountry)
     brandIndustry = getBrandIndustry(clientOpenai, brandName, brandWebsite, brandCountry, brandDescription)
     brandCompetitors = getBrandCompetitors(clientOpenai, brandName, brandWebsite, brandCountry, brandDescription, brandIndustry)

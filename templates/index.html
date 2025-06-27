@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidentia - Brand Research Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fff;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Evidentia - Brand Research Tool</h1>
+        
+        <form id="brandForm">
+            <div class="form-group">
+                <label for="brandName">Brand Name:</label>
+                <input type="text" id="brandName" name="brandName" required placeholder="e.g., jethr">
+            </div>
+            
+            <div class="form-group">
+                <label for="brandWebsite">Brand Website:</label>
+                <input type="text" id="brandWebsite" name="brandWebsite" required placeholder="e.g., jethr.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="brandCountry">Brand Country:</label>
+                <input type="text" id="brandCountry" name="brandCountry" placeholder="e.g., italy (optional, defaults to 'world')">
+            </div>
+            
+            <button type="submit" id="analyzeBtn">🚀 Analyze Brand</button>
+            <button type="button" id="generateQueriesBtn" disabled>📝 Generate Queries</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <p>⏳ Processing... This may take a moment.</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <div class="step" id="brandInfo" style="display: none;">
+                <h3>📊 Brand Information</h3>
+                <div id="brandInfoContent"></div>
+            </div>
+
+            <div class="step" id="queriesSection" style="display: none;">
+                <h3>💡 Generated Queries</h3>
+                <div class="form-group">
+                    <label for="totalQueries">Number of Queries:</label>
+                    <input type="number" id="totalQueries" value="10" min="1" max="100">
+                </div>
+                <div id="queriesContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let brandData = null;
+
+        document.getElementById('brandForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const brandName = document.getElementById('brandName').value;
+            const brandWebsite = document.getElementById('brandWebsite').value;
+            const brandCountry = document.getElementById('brandCountry').value || 'world';
+
+            await analyzeBrand(brandName, brandWebsite, brandCountry);
+        });
+
+        document.getElementById('generateQueriesBtn').addEventListener('click', async function() {
+            const totalQueries = parseInt(document.getElementById('totalQueries').value) || 10;
+            await generateQueries(totalQueries);
+        });
+
+        async function analyzeBrand(brandName, brandWebsite, brandCountry) {
+            showLoading(true);
+            hideError();
+            
+            try {
+                const response = await fetch('/brand-info', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        brandName,
+                        brandWebsite,
+                        brandCountry
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to analyze brand');
+                }
+
+                brandData = data;
+                displayBrandInfo(data);
+                document.getElementById('generateQueriesBtn').disabled = false;
+                
+            } catch (error) {
+                showError('Error analyzing brand: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function generateQueries(totalQueries) {
+            if (!brandData) {
+                showError('Please analyze the brand first');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            
+            try {
+                const response = await fetch('/generate-queries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        brandName: brandData.name,
+                        brandCountry: document.getElementById('brandCountry').value || 'world',
+                        brandDescription: brandData.description,
+                        brandIndustry: brandData.industry,
+                        totalQueries
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate queries');
+                }
+
+                displayQueries(data.queries);
+                
+            } catch (error) {
+                showError('Error generating queries: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayBrandInfo(data) {
+            const content = document.getElementById('brandInfoContent');
+            content.innerHTML = `
+                <p><strong>Name:</strong> ${data.name}</p>
+                <p><strong>Description:</strong> ${data.description}</p>
+                <p><strong>Industry:</strong> ${data.industry}</p>
+                <p><strong>Competitors:</strong></p>
+                <pre>${JSON.stringify(data.competitors, null, 2)}</pre>
+            `;
+            
+            document.getElementById('brandInfo').style.display = 'block';
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function displayQueries(queries) {
+            const content = document.getElementById('queriesContent');
+            content.innerHTML = `<pre>${JSON.stringify(queries, null, 2)}</pre>`;
+            
+            document.getElementById('queriesSection').style.display = 'block';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('analyzeBtn').disabled = show;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
