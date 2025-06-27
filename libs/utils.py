@@ -90,20 +90,51 @@ def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCo
         if 'NULL' not in translatedPrompt:
             prompt = translatedPrompt
     
-    # Call the OpenAI API to get the company description
+    # Call the OpenAI API to get the company description with structured output
     try:
         response = clientOpenai.chat.completions.create(
             model="gpt-4o-mini-2024-07-18",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=500,
             temperature=0.7,
-            timeout=30
+            timeout=30,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "brand_description",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "description": {
+                                "type": "string",
+                                "description": "A 2-4 sentence business description of the company"
+                            }
+                        },
+                        "required": ["description"],
+                        "additionalProperties": False
+                    }
+                }
+            }
         )
-        # Extract the description from the response
+        # Extract the description from the structured response
         result = response.choices[0].message.content
-        if not result or result.strip() == "":
-            raise ValueError("Empty response received from OpenAI API")
-        return result
+        try:
+            parsed_result = json.loads(result)
+            description = parsed_result.get("description", "")
+            if description and description.strip():
+                return description
+            else:
+                # Provide a fallback description
+                fallback_description = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
+                return fallback_description
+        except json.JSONDecodeError:
+            # If structured response fails, try to use the raw content
+            if result and result.strip() and result.strip().upper() != "NULL":
+                return result
+            else:
+                # Provide a fallback description
+                fallback_description = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
+                return fallback_description
     except Exception as e:
         print(f"Error in getBrandDescription: {e}")
         raise Exception(f"Failed to get brand description: {str(e)}")
@@ -149,14 +180,22 @@ def getBrandIndustry(clientOpenai, brandName: str, brandWebsite: str, brandDescr
             prompt = translatedPrompt
 
     # Call the OpenAI API to get the company industry
-    response = clientOpenai.chat.completions.create(
-        model="gpt-4o-mini-2024-07-18",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=500,
-        temperature=0.7
-    )
-    # Extract the industry from the response
-    return response.choices[0].message.content
+    try:
+        response = clientOpenai.chat.completions.create(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7,
+            timeout=30
+        )
+        # Extract the industry from the response
+        result = response.choices[0].message.content
+        if not result or result.strip() == "":
+            raise ValueError("Empty response received from OpenAI API")
+        return result
+    except Exception as e:
+        print(f"Error in getBrandIndustry: {e}")
+        raise Exception(f"Failed to get brand industry: {str(e)}")
 
 
 def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDescription: str, brandIndustry: str, brandCountry: str = "world") -> dict:
@@ -200,28 +239,73 @@ def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDe
         if 'NULL' not in translatedPrompt:
             prompt = translatedPrompt
 
-    # Call the OpenAI API to get the competitors
-    response = clientOpenai.chat.completions.create(
-        model="gpt-4o-mini-2024-07-18",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=500,
-        temperature=0.7
-    )
-    # Extract the competitors from the response
-    rawJson = response.choices[0].message.content
+    # Call the OpenAI API to get the competitors with structured output
+    try:
+        response = clientOpenai.chat.completions.create(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000,
+            temperature=0.7,
+            timeout=30,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "competitor_analysis",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "competitors": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string",
+                                            "description": "The competitor's company name"
+                                        },
+                                        "website": {
+                                            "type": "string",
+                                            "description": "The competitor's website URL"
+                                        },
+                                        "reason": {
+                                            "type": "string",
+                                            "description": "Brief explanation of why they compete"
+                                        }
+                                    },
+                                    "required": ["name", "website", "reason"],
+                                    "additionalProperties": False
+                                },
+                                "minItems": 3,
+                                "maxItems": 5
+                            }
+                        },
+                        "required": ["competitors"],
+                        "additionalProperties": False
+                    }
+                }
+            }
+        )
+        # Extract the competitors from the structured response
+        rawJson = response.choices[0].message.content
+        
+        if not rawJson or not rawJson.strip():
+            print("Warning: Empty response from OpenAI API for competitors")
+            return {"competitors": []}
 
-    # Remove code block markers if present
-    if rawJson.startswith("```json"):
-        rawJson = rawJson[len("```json"):].strip()
-    
-    if rawJson.endswith("```"):
-        rawJson = rawJson[:-3].strip()
-
-    if not rawJson.strip():
-        raise ValueError("No JSON output received from OpenAI API.")
-
-    # Parse and return the JSON as a Python dictionary
-    return json.loads(rawJson)
+        # Parse the structured JSON response
+        try:
+            result = json.loads(rawJson)
+            return result
+        except json.JSONDecodeError as json_error:
+            print(f"JSON decode error with structured output: {json_error}")
+            print(f"Raw response: {rawJson}")
+            # Return a fallback structure if parsing fails
+            return {"competitors": []}
+            
+    except Exception as e:
+        print(f"Error in getBrandCompetitors: {e}")
+        # Return a fallback structure instead of raising an exception
+        return {"competitors": []}
 
 
 def getBrandName(clientOpenai, brandDescription: str) -> str:
@@ -247,15 +331,62 @@ def getBrandName(clientOpenai, brandDescription: str) -> str:
         companyDescription=brandDescription
     )
 
-    # Call the OpenAI API to get the company name
-    response = clientOpenai.chat.completions.create(
-        model="gpt-4o-mini-2024-07-18",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=500,
-        temperature=0.7
-    )
-    # Extract the name from the response
-    return response.choices[0].message.content
+    # Call the OpenAI API to get the company name with structured output
+    try:
+        response = clientOpenai.chat.completions.create(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7,
+            timeout=30,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "brand_name",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "The extracted or identified company name"
+                            }
+                        },
+                        "required": ["name"],
+                        "additionalProperties": False
+                    }
+                }
+            }
+        )
+        # Extract the name from the structured response
+        result = response.choices[0].message.content
+        try:
+            parsed_result = json.loads(result)
+            name = parsed_result.get("name", "")
+            if name and name.strip():
+                return name
+            else:
+                # Extract a reasonable name from the description or use a fallback
+                words = brandDescription.split()
+                for word in words:
+                    if word[0].isupper() and len(word) > 2 and not word.lower() in ['the', 'and', 'for', 'with', 'this', 'that']:
+                        return word
+                # If no suitable name found, return a generic business name
+                return "Business Entity"
+        except json.JSONDecodeError:
+            # If structured response fails, try to use the raw content
+            if result and result.strip() and result.strip().upper() != "NULL":
+                return result
+            else:
+                # Extract a reasonable name from the description or use a fallback
+                words = brandDescription.split()
+                for word in words:
+                    if word[0].isupper() and len(word) > 2 and not word.lower() in ['the', 'and', 'for', 'with', 'this', 'that']:
+                        return word
+                # If no suitable name found, return a generic business name
+                return "Business Entity"
+    except Exception as e:
+        print(f"Error in getBrandName: {e}")
+        raise Exception(f"Failed to get brand name: {str(e)}")
 
 
 def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world") -> dict:
