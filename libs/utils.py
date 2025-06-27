@@ -1,9 +1,5 @@
 import sys
 import os
-from dotenv import load_dotenv
-load_dotenv()
-os.chdir(os.getenv("PROJECT_DIRECTORY"))
-sys.path.append(os.getenv("PROJECT_DIRECTORY"))
 
 from langchain.prompts import PromptTemplate
 from openai import OpenAI
@@ -27,7 +23,10 @@ def translateString(stringToTranslate: str, targetLanguage: str) -> str:
         str: The translated string, or an empty string if translation fails.
     """
     # Initialize the OpenAI client
-    llmClient = OpenAI()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    llmClient = OpenAI(api_key=api_key)
 
     # Load the translation prompt template from file
     with open("prompts/translateString.txt", "r", encoding="utf-8") as file:
@@ -43,16 +42,15 @@ def translateString(stringToTranslate: str, targetLanguage: str) -> str:
     )
 
     # Call the OpenAI API to get the translation
-    response = llmClient.responses.create(
+    response = llmClient.chat.completions.create(
         model="gpt-4o-mini-2024-07-18",
-        input=prompt,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=500,
+        temperature=0.7
     )
     
     # Extract the translated text from the response
-    messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
-
-    # Return the first translated message, or an empty string if none
-    return next(iter(messagesTexts.values()), "")
+    return response.choices[0].message.content
 
 
 def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCountry: str = "world") -> str:
@@ -93,16 +91,22 @@ def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCo
             prompt = translatedPrompt
     
     # Call the OpenAI API to get the company description
-    response = clientOpenai.responses.create(
-        model="gpt-4o-mini-2024-07-18",
-        tools=[{"type": "web_search_preview"}],
-        input=prompt,
-    )
-    # Extract the description from the response
-    messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
-
-    # Return the first description message, or an empty string if none
-    return next(iter(messagesTexts.values()), "")
+    try:
+        response = clientOpenai.chat.completions.create(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7,
+            timeout=30
+        )
+        # Extract the description from the response
+        result = response.choices[0].message.content
+        if not result or result.strip() == "":
+            raise ValueError("Empty response received from OpenAI API")
+        return result
+    except Exception as e:
+        print(f"Error in getBrandDescription: {e}")
+        raise Exception(f"Failed to get brand description: {str(e)}")
 
 
 def getBrandIndustry(clientOpenai, brandName: str, brandWebsite: str, brandDescription: str, brandCountry: str = "world") -> str:
@@ -145,16 +149,14 @@ def getBrandIndustry(clientOpenai, brandName: str, brandWebsite: str, brandDescr
             prompt = translatedPrompt
 
     # Call the OpenAI API to get the company industry
-    response = clientOpenai.responses.create(
+    response = clientOpenai.chat.completions.create(
         model="gpt-4o-mini-2024-07-18",
-        tools=[{"type": "web_search_preview"}],
-        input=prompt,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=500,
+        temperature=0.7
     )
     # Extract the industry from the response
-    messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
-
-    # Return the first industry message, or an empty string if none
-    return next(iter(messagesTexts.values()), "")
+    return response.choices[0].message.content
 
 
 def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDescription: str, brandIndustry: str, brandCountry: str = "world") -> dict:
@@ -199,14 +201,14 @@ def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDe
             prompt = translatedPrompt
 
     # Call the OpenAI API to get the competitors
-    response = clientOpenai.responses.create(
+    response = clientOpenai.chat.completions.create(
         model="gpt-4o-mini-2024-07-18",
-        tools=[{"type": "web_search_preview"}],
-        input=prompt,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=500,
+        temperature=0.7
     )
     # Extract the competitors from the response
-    messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
-    rawJson = next(iter(messagesTexts.values()), "")
+    rawJson = response.choices[0].message.content
 
     # Remove code block markers if present
     if rawJson.startswith("```json"):
@@ -246,16 +248,14 @@ def getBrandName(clientOpenai, brandDescription: str) -> str:
     )
 
     # Call the OpenAI API to get the company name
-    response = clientOpenai.responses.create(
+    response = clientOpenai.chat.completions.create(
         model="gpt-4o-mini-2024-07-18",
-        tools=[{"type": "web_search_preview"}],
-        input=prompt,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=500,
+        temperature=0.7
     )
     # Extract the name from the response
-    messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
-
-    # Return the first name message, or an empty string if none
-    return next(iter(messagesTexts.values()), "")
+    return response.choices[0].message.content
 
 
 def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world") -> dict:
@@ -270,10 +270,13 @@ def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world
     Returns:
         dict: A dictionary with keys 'description' and 'industry'.
     """
-    clientOpenai = OpenAI()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    clientOpenai = OpenAI(api_key=api_key)
     brandDescription = getBrandDescription(clientOpenai, brandName, brandWebsite, brandCountry)
-    brandIndustry = getBrandIndustry(clientOpenai, brandName, brandWebsite, brandCountry, brandDescription)
-    brandCompetitors = getBrandCompetitors(clientOpenai, brandName, brandWebsite, brandCountry, brandDescription, brandIndustry)
+    brandIndustry = getBrandIndustry(clientOpenai, brandName, brandWebsite, brandDescription, brandCountry)
+    brandCompetitors = getBrandCompetitors(clientOpenai, brandName, brandWebsite, brandDescription, brandIndustry, brandCountry)
     brandName = getBrandName(clientOpenai, brandDescription)
     
     return {

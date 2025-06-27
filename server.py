@@ -1,343 +1,274 @@
-from flask import Flask, request, jsonify, render_template_string
-import os
 import sys
+import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from .env file
+load_dotenv(override=True)
 
-# Add project directory to path
-if os.getenv("PROJECT_DIRECTORY"):
-    os.chdir(os.getenv("PROJECT_DIRECTORY"))
-    sys.path.append(os.getenv("PROJECT_DIRECTORY"))
+# Also try loading from explicit path
+load_dotenv(dotenv_path='.env', override=True)
 
+from flask import Flask, request, jsonify, render_template, Response
+import json
+import time
 import libs.utils as utils
 import libs.openai as openaiAnalytics
+import libs.geo_analysis as geo_analysis
 
 app = Flask(__name__)
 
-# HTML template for the frontend
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brand Research Tool</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-        input[type="text"], input[type="number"], select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        .results {
-            margin-top: 30px;
-            padding: 20px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            display: none;
-        }
-        .loading {
-            text-align: center;
-            color: #666;
-            font-style: italic;
-        }
-        .error {
-            color: #dc3545;
-            background-color: #f8d7da;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        .section {
-            margin-bottom: 20px;
-        }
-        .section h3 {
-            color: #333;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 5px;
-        }
-        .query-item {
-            background: white;
-            padding: 10px;
-            margin: 5px 0;
-            border-left: 3px solid #007bff;
-            border-radius: 3px;
-        }
-        .query-topic {
-            font-weight: bold;
-            color: #007bff;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Brand Research Tool</h1>
-        
-        <form id="brandForm">
-            <div class="form-group">
-                <label for="brandName">Brand Name:</label>
-                <input type="text" id="brandName" name="brandName" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="brandWebsite">Brand Website:</label>
-                <input type="text" id="brandWebsite" name="brandWebsite" placeholder="example.com" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="brandCountry">Brand Country:</label>
-                <select id="brandCountry" name="brandCountry">
-                    <option value="world">World</option>
-                    <option value="afghanistan">Afghanistan</option>
-                    <option value="albania">Albania</option>
-                    <option value="algeria">Algeria</option>
-                    <option value="argentina">Argentina</option>
-                    <option value="australia">Australia</option>
-                    <option value="austria">Austria</option>
-                    <option value="bangladesh">Bangladesh</option>
-                    <option value="belgium">Belgium</option>
-                    <option value="brazil">Brazil</option>
-                    <option value="canada">Canada</option>
-                    <option value="china">China</option>
-                    <option value="colombia">Colombia</option>
-                    <option value="denmark">Denmark</option>
-                    <option value="egypt">Egypt</option>
-                    <option value="finland">Finland</option>
-                    <option value="france">France</option>
-                    <option value="germany">Germany</option>
-                    <option value="greece">Greece</option>
-                    <option value="india">India</option>
-                    <option value="indonesia">Indonesia</option>
-                    <option value="iran">Iran</option>
-                    <option value="iraq">Iraq</option>
-                    <option value="ireland">Ireland</option>
-                    <option value="israel">Israel</option>
-                    <option value="italy">Italy</option>
-                    <option value="japan">Japan</option>
-                    <option value="kenya">Kenya</option>
-                    <option value="mexico">Mexico</option>
-                    <option value="netherlands">Netherlands</option>
-                    <option value="new zealand">New Zealand</option>
-                    <option value="nigeria">Nigeria</option>
-                    <option value="norway">Norway</option>
-                    <option value="pakistan">Pakistan</option>
-                    <option value="peru">Peru</option>
-                    <option value="philippines">Philippines</option>
-                    <option value="poland">Poland</option>
-                    <option value="portugal">Portugal</option>
-                    <option value="russia">Russia</option>
-                    <option value="saudi arabia">Saudi Arabia</option>
-                    <option value="south africa">South Africa</option>
-                    <option value="south korea">South Korea</option>
-                    <option value="spain">Spain</option>
-                    <option value="sweden">Sweden</option>
-                    <option value="switzerland">Switzerland</option>
-                    <option value="thailand">Thailand</option>
-                    <option value="turkey">Turkey</option>
-                    <option value="united kingdom">United Kingdom</option>
-                    <option value="united states">United States</option>
-                    <option value="vietnam">Vietnam</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="totalQueries">Number of Queries to Generate:</label>
-                <input type="number" id="totalQueries" name="totalQueries" value="10" min="1" max="50">
-            </div>
-            
-            <button type="submit">Analyze Brand</button>
-        </form>
-        
-        <div id="results" class="results">
-            <div id="loading" class="loading" style="display: none;">
-                Analyzing brand... This may take a few minutes.
-            </div>
-            <div id="content"></div>
-        </div>
-    </div>
-
-    <script>
-        document.getElementById('brandForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
-            
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const resultsDiv = document.getElementById('results');
-            const loadingDiv = document.getElementById('loading');
-            const contentDiv = document.getElementById('content');
-            
-            // Show loading state
-            submitBtn.disabled = true;
-            resultsDiv.style.display = 'block';
-            loadingDiv.style.display = 'block';
-            contentDiv.innerHTML = '';
-            
-            try {
-                const response = await fetch('/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                
-                if (result.error) {
-                    contentDiv.innerHTML = '<div class="error">Error: ' + result.error + '</div>';
-                } else {
-                    displayResults(result);
-                }
-            } catch (error) {
-                contentDiv.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
-            } finally {
-                loadingDiv.style.display = 'none';
-                submitBtn.disabled = false;
-            }
-        });
-        
-        function displayResults(data) {
-            const contentDiv = document.getElementById('content');
-            
-            let html = '';
-            
-            // Brand Information
-            html += '<div class="section">';
-            html += '<h3>Brand Information</h3>';
-            html += '<p><strong>Name:</strong> ' + (data.brandInfo.name || 'N/A') + '</p>';
-            html += '<p><strong>Industry:</strong> ' + (data.brandInfo.industry || 'N/A') + '</p>';
-            html += '<p><strong>Description:</strong> ' + (data.brandInfo.description || 'N/A') + '</p>';
-            html += '</div>';
-            
-            // Competitors
-            if (data.brandInfo.competitors && data.brandInfo.competitors.length > 0) {
-                html += '<div class="section">';
-                html += '<h3>Competitors</h3>';
-                data.brandInfo.competitors.forEach(competitor => {
-                    html += '<div class="query-item">';
-                    html += '<div class="query-topic">' + competitor.name + '</div>';
-                    html += '<div>' + competitor.description + '</div>';
-                    html += '</div>';
-                });
-                html += '</div>';
-            }
-            
-            // Generated Queries
-            if (data.queries && data.queries.length > 0) {
-                html += '<div class="section">';
-                html += '<h3>Generated Search Queries</h3>';
-                data.queries.forEach(query => {
-                    html += '<div class="query-item">';
-                    html += '<div class="query-topic">' + query.topic + '</div>';
-                    html += '<div>' + query.prompt + '</div>';
-                    html += '</div>';
-                });
-                html += '</div>';
-            }
-            
-            contentDiv.innerHTML = html;
-        }
-    </script>
-</body>
-</html>
-"""
+# Print environment variables for debugging
+print("=== Environment Variables ===")
+api_key = os.getenv('OPENAI_API_KEY', 'NOT SET')
+print(f"OPENAI_API_KEY: {api_key[:10] if api_key != 'NOT SET' else 'NOT SET'}{'*' * 20 if api_key != 'NOT SET' else ''}")
+print(f"PROJECT_DIRECTORY: {os.getenv('PROJECT_DIRECTORY', 'NOT SET')}")
+print(f"Current working directory: {os.getcwd()}")
+print(f"API key length: {len(api_key) if api_key != 'NOT SET' else 0}")
+print("=============================")
 
 @app.route('/')
 def index():
-    """Serve the main HTML interface"""
-    return render_template_string(HTML_TEMPLATE)
+    return render_template('index.html')
 
-@app.route('/analyze', methods=['POST'])
-def analyze_brand():
-    """Analyze brand and generate queries"""
+@app.route('/brand-info', methods=['POST'])
+def get_brand_info():
     try:
-        data = request.get_json()
-        
-        brand_name = data.get('brandName', '').strip()
-        brand_website = data.get('brandWebsite', '').strip()
-        brand_country = data.get('brandCountry', 'world').strip()
-        total_queries = int(data.get('totalQueries', 10))
+        data = request.json
+        brand_name = data.get('brandName')
+        brand_website = data.get('brandWebsite')
+        brand_country = data.get('brandCountry', 'world')
         
         if not brand_name or not brand_website:
-            return jsonify({'error': 'Brand name and website are required'}), 400
+            return jsonify({'error': 'brandName and brandWebsite are required'}), 400
         
-        # Get company information
-        brand_info = utils.getCompanyInfo(brand_name, brand_website, brand_country)
-        
-        # Generate queries
-        queries = openaiAnalytics.getCoherentQueries(
-            brand_info['name'], 
-            brand_country, 
-            brand_info['description'], 
-            brand_info['industry'], 
-            total_queries
-        )
-        
-        return jsonify({
-            'brandInfo': brand_info,
-            'queries': queries
-        })
-        
+        brand_information = utils.getCompanyInfo(brand_name, brand_website, brand_country)
+        return jsonify(brand_information)
+    
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/health')
+@app.route('/generate-queries', methods=['POST'])
+def generate_queries():
+    try:
+        data = request.json
+        brand_name = data.get('brandName')
+        brand_country = data.get('brandCountry', 'world')
+        brand_description = data.get('brandDescription')
+        brand_industry = data.get('brandIndustry')
+        total_queries = data.get('totalQueries', 10)
+        
+        if not all([brand_name, brand_description, brand_industry]):
+            return jsonify({'error': 'brandName, brandDescription, and brandIndustry are required'}), 400
+        
+        queries = openaiAnalytics.getCoherentQueries(
+            brand_name, brand_country, brand_description, brand_industry, total_queries
+        )
+        return jsonify({'queries': queries})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/test-queries', methods=['POST'])
+def test_queries():
+    try:
+        data = request.json
+        brand_name = data.get('brandName')
+        queries = data.get('queries', [])
+        competitors = data.get('competitors', [])
+        locations = data.get('locations', ['United States'])
+        
+        if not brand_name or not queries:
+            return jsonify({'error': 'brandName and queries are required'}), 400
+        
+        # Extract query strings from query objects if needed
+        query_strings = []
+        for q in queries:
+            if isinstance(q, dict):
+                query_strings.append(q.get('query', str(q)))
+            else:
+                query_strings.append(str(q))
+        
+        analysis = search_analysis.analyze_brand_presence(
+            brand_name, competitors, query_strings, locations
+        )
+        return jsonify(analysis)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-llm-models', methods=['GET'])
+def get_llm_models():
+    try:
+        models = ["gpt-4o-mini-2024-07-18", "gpt-3.5-turbo", "gpt-4-turbo"]
+        return jsonify({'models': models})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-llm-suggestions', methods=['POST'])
+def get_llm_suggestions():
+    try:
+        data = request.json
+        brand_name = data.get('brandName')
+        industry = data.get('industry', '')
+        
+        if not brand_name:
+            return jsonify({'error': 'brandName is required'}), 400
+        
+        suggestions = geo_analysis.generate_llm_test_queries(brand_name, industry)
+        return jsonify({'suggestions': suggestions})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/stream-brand-info', methods=['POST'])
+def stream_brand_info():
+    # Get request data outside the generator function
+    data = request.json
+    brand_name = data.get('brandName')
+    brand_website = data.get('brandWebsite')
+    brand_country = data.get('brandCountry', 'world')
+    
+    def generate():
+        try:
+            
+            if not brand_name or not brand_website:
+                yield f"data: {json.dumps({'error': 'brandName and brandWebsite are required'})}\n\n"
+                return
+            
+            yield f"data: {json.dumps({'status': 'Starting brand analysis...', 'step': 'init'})}\n\n"
+            time.sleep(0.1)
+            
+            yield f"data: {json.dumps({'status': 'Getting brand description...', 'step': 'description'})}\n\n"
+            api_key = os.getenv("OPENAI_API_KEY")
+            from openai import OpenAI
+            client_openai = OpenAI(api_key=api_key)
+            brand_description = utils.getBrandDescription(client_openai, brand_name, brand_website, brand_country)
+            
+            yield f"data: {json.dumps({'status': 'Analyzing industry...', 'step': 'industry'})}\n\n"
+            brand_industry = utils.getBrandIndustry(client_openai, brand_name, brand_website, brand_description, brand_country)
+            
+            yield f"data: {json.dumps({'status': 'Finding competitors...', 'step': 'competitors'})}\n\n"
+            brand_competitors = utils.getBrandCompetitors(client_openai, brand_name, brand_website, brand_description, brand_industry, brand_country)
+            
+            yield f"data: {json.dumps({'status': 'Extracting brand name...', 'step': 'name'})}\n\n"
+            final_brand_name = utils.getBrandName(client_openai, brand_description)
+            
+            result = {
+                "description": brand_description,
+                "industry": brand_industry,
+                "competitors": brand_competitors,
+                "name": final_brand_name
+            }
+            
+            yield f"data: {json.dumps({'status': 'Analysis complete!', 'step': 'complete', 'result': result})}\n\n"
+            
+        except Exception as e:
+            error_msg = f"Brand analysis error: {str(e)}"
+            print(f"ERROR in stream_brand_info: {error_msg}")
+            print(f"Error type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json.dumps({'error': error_msg})}\n\n"
+    
+    return Response(generate(), mimetype='text/event-stream')
+
+@app.route('/stream-generate-queries', methods=['POST'])
+def stream_generate_queries():
+    # Get request data outside the generator function
+    data = request.json
+    brand_name = data.get('brandName')
+    brand_country = data.get('brandCountry', 'world')
+    brand_description = data.get('brandDescription')
+    brand_industry = data.get('brandIndustry')
+    total_queries = data.get('totalQueries', 10)
+    
+    def generate():
+        try:
+            
+            if not all([brand_name, brand_description, brand_industry]):
+                yield f"data: {json.dumps({'error': 'brandName, brandDescription, and brandIndustry are required'})}\n\n"
+                return
+            
+            yield f"data: {json.dumps({'status': 'Preparing query generation...', 'step': 'init'})}\n\n"
+            time.sleep(0.1)
+            
+            yield f"data: {json.dumps({'status': f'Generating {total_queries} coherent queries...', 'step': 'generating'})}\n\n"
+            queries = openaiAnalytics.getCoherentQueries(
+                brand_name, brand_country, brand_description, brand_industry, total_queries
+            )
+            
+            yield f"data: {json.dumps({'status': 'Query generation complete!', 'step': 'complete', 'result': {'queries': queries}})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    return Response(generate(), mimetype='text/event-stream')
+
+@app.route('/stream-test-queries', methods=['POST'])
+def stream_test_queries():
+    # Get request data outside the generator function
+    data = request.json
+    brand_name = data.get('brandName')
+    queries = data.get('queries', [])
+    competitors = data.get('competitors', [])
+    llm_models = data.get('models', ['gpt-4o-mini-2024-07-18'])
+    
+    def generate():
+        try:
+            
+            if not brand_name or not queries:
+                yield f"data: {json.dumps({'error': 'brandName and queries are required'})}\n\n"
+                return
+            
+            # Extract query strings from query objects if needed
+            query_strings = []
+            for q in queries:
+                if isinstance(q, dict):
+                    query_strings.append(q.get('query', str(q)))
+                else:
+                    query_strings.append(str(q))
+            
+            
+            yield f"data: {json.dumps({'status': f'Starting GEO analysis for {len(query_strings)} queries across {len(llm_models)} LLM models...', 'step': 'init', 'progress': 0})}\n\n"
+            time.sleep(0.1)
+            
+            # Use the streaming GEO analysis function
+            progress_messages = []
+            
+            def progress_callback(message, step=None, progress=None, **kwargs):
+                progress_messages.append({
+                    'status': message,
+                    'step': step or 'analyzing',
+                    'progress': progress or 0,
+                    **kwargs
+                })
+            
+            # Run streaming analysis
+            analysis_results = geo_analysis.analyze_llm_brand_positioning_streaming(
+                brand_name, competitors, query_strings, llm_models, progress_callback
+            )
+            
+            # Stream all the collected progress messages
+            for msg in progress_messages:
+                yield f"data: {json.dumps(msg)}\n\n"
+                time.sleep(0.1)  # Small delay for better UX
+            
+            yield f"data: {json.dumps({'status': 'Generating optimization suggestions...', 'step': 'suggestions', 'progress': 95})}\n\n"
+            
+            # Add GEO optimization suggestions
+            suggestions = geo_analysis.get_geo_optimization_suggestions(analysis_results)
+            analysis_results["optimization_suggestions"] = suggestions
+            
+            yield f"data: {json.dumps({'status': 'GEO Analysis complete!', 'step': 'complete', 'progress': 100, 'result': analysis_results})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    return Response(generate(), mimetype='text/event-stream')
+
+@app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
     return jsonify({'status': 'healthy'})
 
 if __name__ == '__main__':
-    # Check if required environment variables are set
-    if not os.getenv('OPENAI_API_KEY'):
-        print("Warning: OPENAI_API_KEY environment variable not set")
-    
     app.run(debug=True, host='0.0.0.0', port=5000)

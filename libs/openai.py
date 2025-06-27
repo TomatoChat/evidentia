@@ -1,9 +1,5 @@
 import sys
 import os
-from dotenv import load_dotenv
-load_dotenv()
-os.chdir(os.getenv("PROJECT_DIRECTORY"))
-sys.path.append(os.getenv("PROJECT_DIRECTORY"))
 
 import json
 from langchain.prompts import PromptTemplate
@@ -59,7 +55,10 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
         list: A list of dictionaries containing the generated queries, parsed from the JSON response.
     """
     # Initialize the OpenAI client
-    llmClient = OpenAI()
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    llmClient = OpenAI(api_key=api_key)
 
     # Load the prompt template for generating queries from file
     with open("prompts/brandPromptsGeneration.txt", "r", encoding="utf-8") as file:

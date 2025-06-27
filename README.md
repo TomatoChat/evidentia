@@ -1,90 +1,138 @@
-# Evidentia - Brand Research Tool
+# Evidentia - Generative Engine Optimization (GEO) Tool
 
-A powerful brand research tool that uses OpenAI to analyze companies and generate relevant search queries for market research purposes.
+🤖 A powerful GEO analysis tool that helps brands understand their positioning in LLM responses and optimize for generative AI engines.
+
+## What is GEO?
+
+**Generative Engine Optimization (GEO)** is the practice of optimizing content and brand positioning for Large Language Models (LLMs) and AI-powered responses, rather than traditional search engines. As users increasingly rely on AI assistants for recommendations and information, GEO becomes crucial for brand visibility.
 
 ## Features
 
-- **Company Analysis**: Automatically extract company descriptions, industries, and competitors
-- **Query Generation**: Generate targeted search queries for market research
-- **Multi-language Support**: Supports 50+ countries with localized language processing
-- **Web Interface**: Simple, intuitive web interface for easy interaction
-- **API Endpoints**: RESTful API for programmatic access
+- **LLM Brand Analysis**: Analyze how your brand appears in AI responses across different models
+- **Query Generation**: Creates test queries to evaluate brand positioning
+- **Multi-Model Testing**: Test across GPT-4, GPT-3.5, and other LLM models
+- **Sentiment Analysis**: Understand how AI portrays your brand (positive/neutral/negative)
+- **Competitor Comparison**: See how competitors are positioned in AI responses
+- **Optimization Suggestions**: Get actionable GEO improvement recommendations
+- **Real-time Streaming**: Watch analysis progress in real-time
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
-
-- Python 3.7+
+- Python 3.11 or higher
 - OpenAI API key
-- Required Python packages (see Installation)
 
-### Installation
+## Installation
 
-1. Clone the repository:
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd evidentia
+   ```
+
+2. **Create and activate virtual environment**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` and add your API keys:
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   PROJECT_DIRECTORY=/path/to/your/evidentia/directory
+   
+   # Optional - for real Google search results (100 free searches/month)
+   SERPAPI_KEY=your_serpapi_key_here
+   ```
+
+## Usage
+
+### Web Interface
+
+1. **Start the server**
+   ```bash
+   source venv/bin/activate
+   python server.py
+   ```
+
+2. **Open your browser**
+   Navigate to `http://127.0.0.1:5000`
+
+3. **Use the GEO analysis**
+   - Enter brand name (e.g., "jethr")
+   - Enter brand website (e.g., "jethr.com")
+   - Optionally specify country (defaults to "world")
+   - Click "Analyze Brand" to get company information
+   - Click "Generate Queries" to create LLM test queries
+   - Click "Test Queries & Rankings" to analyze brand positioning in AI responses
+
+### API Endpoints
+
+#### Brand Information
 ```bash
-git clone <repository-url>
-cd evidentia
+POST /brand-info
+Content-Type: application/json
+
+{
+  "brandName": "jethr",
+  "brandWebsite": "jethr.com",
+  "brandCountry": "italy"
+}
 ```
 
-2. Install required packages:
+#### Generate LLM Test Queries
 ```bash
-pip install flask python-dotenv openai langchain
+POST /generate-queries
+Content-Type: application/json
+
+{
+  "brandName": "Company Name",
+  "brandCountry": "italy",
+  "brandDescription": "Company description...",
+  "brandIndustry": "Technology",
+  "totalQueries": 10
+}
 ```
 
-3. Create a `.env` file in the project root:
+#### GEO Analysis (LLM Brand Positioning)
 ```bash
-OPENAI_API_KEY=your_openai_api_key_here
-PROJECT_DIRECTORY=/path/to/evidentia
+POST /stream-test-queries
+Content-Type: application/json
+
+{
+  "brandName": "Company Name",
+  "queries": ["What are the best tech companies?", "Recommend software tools"],
+  "competitors": ["Competitor1", "Competitor2"],
+  "models": ["gpt-4o-mini-2024-07-18", "gpt-3.5-turbo"]
+}
 ```
 
-### Running the Application
-
-#### Web Interface (Recommended)
-
-1. Start the Flask server:
+#### Health Check
 ```bash
-python server.py
+GET /health
 ```
 
-2. Open your web browser and navigate to:
-```
-http://localhost:5000
-```
+### Jupyter Notebook
 
-3. Fill out the form with:
-   - **Brand Name**: The company you want to analyze
-   - **Brand Website**: Company website (e.g., example.com)
-   - **Brand Country**: Select from 50+ supported countries
-   - **Number of Queries**: How many search queries to generate (1-50)
-
-4. Click "Analyze Brand" and wait for results
-
-#### Jupyter Notebook
-
-1. Open the notebook:
-```bash
-jupyter notebook notebooks/openAI.ipynb
-```
-
-2. Update the variables in the second cell:
-```python
-brandName = "your_brand_name"
-brandWebsite = "your_brand_website.com"
-brandCountry = "your_country"
-```
-
-3. Run all cells to see the analysis
-
-#### Python Script
+You can also use the functionality directly in Jupyter notebooks:
 
 ```python
 import libs.utils as utils
 import libs.openai as openaiAnalytics
 
-# Get company information
-brand_info = utils.getCompanyInfo("BrandName", "website.com", "italy")
+# Get brand information
+brand_info = utils.getCompanyInfo("jethr", "jethr.com", "italy")
 
-# Generate search queries
+# Generate queries
 queries = openaiAnalytics.getCoherentQueries(
     brand_info['name'], 
     "italy", 
@@ -92,60 +140,6 @@ queries = openaiAnalytics.getCoherentQueries(
     brand_info['industry'], 
     10
 )
-
-print("Brand Info:", brand_info)
-print("Queries:", queries)
-```
-
-## API Endpoints
-
-### GET /
-Returns the web interface HTML page.
-
-### POST /analyze
-Analyzes a brand and generates search queries.
-
-**Request Body:**
-```json
-{
-  "brandName": "Example Corp",
-  "brandWebsite": "example.com",
-  "brandCountry": "italy",
-  "totalQueries": 10
-}
-```
-
-**Response:**
-```json
-{
-  "brandInfo": {
-    "name": "Example Corp",
-    "description": "Company description...",
-    "industry": "Technology",
-    "competitors": [
-      {
-        "name": "Competitor 1",
-        "description": "Competitor description..."
-      }
-    ]
-  },
-  "queries": [
-    {
-      "topic": "Find CRM tools",
-      "prompt": "Recommend a CRM system for small businesses..."
-    }
-  ]
-}
-```
-
-### GET /health
-Health check endpoint.
-
-**Response:**
-```json
-{
-  "status": "healthy"
-}
 ```
 
 ## Project Structure
@@ -153,82 +147,99 @@ Health check endpoint.
 ```
 evidentia/
 ├── libs/
-│   ├── openai.py          # OpenAI API integration
-│   └── utils.py           # Utility functions
-├── notebooks/
-│   └── openAI.ipynb       # Jupyter notebook example
+│   ├── openai.py          # OpenAI integration functions
+│   └── utils.py           # Utility functions for brand analysis
 ├── prompts/
-│   ├── brandCompetitors.txt
-│   ├── brandDescription.txt
-│   ├── brandIndustry.txt
-│   ├── brandName.txt
-│   ├── brandPromptsGeneration.txt
-│   └── translateString.txt
+│   ├── brandDescription.txt    # Prompt for brand description
+│   ├── brandIndustry.txt      # Prompt for industry analysis
+│   ├── brandCompetitors.txt   # Prompt for competitor analysis
+│   ├── brandName.txt          # Prompt for brand name extraction
+│   ├── brandPromptsGeneration.txt  # Prompt for query generation
+│   └── translateString.txt    # Prompt for translation
+├── templates/
+│   └── index.html         # Web interface template
 ├── utils/
-│   └── countryLanguage.json
+│   └── countryLanguage.json   # Country-language mappings
+├── notebooks/
+│   └── openAI.ipynb       # Example Jupyter notebook
 ├── server.py              # Flask web server
-├── .env                   # Environment variables
-└── README.md
+├── requirements.txt       # Python dependencies
+├── .env.example          # Environment variables template
+└── README.md             # This file
 ```
 
-## Supported Countries
+## Configuration
 
-The tool supports 50+ countries with localized language processing:
+The application uses the following environment variables:
 
-- **Europe**: Italy, France, Germany, Spain, UK, etc.
-- **Americas**: USA, Canada, Brazil, Argentina, etc.
-- **Asia**: China, Japan, India, South Korea, etc.
-- **Africa**: South Africa, Nigeria, Kenya, etc.
-- **Oceania**: Australia, New Zealand
+- `OPENAI_API_KEY`: Your OpenAI API key (required)
+- `PROJECT_DIRECTORY`: Absolute path to the project directory (required)
 
-## Environment Variables
+### Understanding GEO vs SEO
 
-Create a `.env` file with the following variables:
+**Traditional SEO** focuses on optimizing for search engine rankings (Google, Bing, etc.)
+**GEO (Generative Engine Optimization)** focuses on optimizing for AI assistant responses (ChatGPT, Claude, etc.)
+
+This tool helps you understand and improve your **GEO performance** - how your brand appears when users ask AI assistants for recommendations, comparisons, or information.
+
+## Dependencies
+
+- `openai>=1.0.0` - OpenAI API client
+- `langchain>=0.1.0` - LangChain for prompt templates
+- `python-dotenv>=1.0.0` - Environment variable management
+- `flask>=2.0.0` - Web framework
+- `pocketflow` - Additional utilities for data flow
+
+## Development
+
+To run in development mode:
 
 ```bash
-# Required
-OPENAI_API_KEY=your_openai_api_key_here
-PROJECT_DIRECTORY=/full/path/to/evidentia
+source venv/bin/activate
+export FLASK_DEBUG=1
+python server.py
+```
 
-# Optional
-FLASK_ENV=development
-FLASK_DEBUG=True
+The server will automatically reload when you make changes to the code.
+
+## API Response Examples
+
+### Brand Information Response
+```json
+{
+  "name": "Jethr",
+  "description": "A technology company specializing in...",
+  "industry": "Technology",
+  "competitors": {
+    "direct_competitors": [...],
+    "indirect_competitors": [...]
+  }
+}
+```
+
+### Queries Response
+```json
+{
+  "queries": [
+    {
+      "query": "search query 1",
+      "intent": "brand awareness"
+    },
+    {
+      "query": "search query 2",
+      "intent": "competitor analysis"
+    }
+  ]
+}
 ```
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **"No module named 'libs'"**
-   - Ensure `PROJECT_DIRECTORY` in `.env` points to the correct path
-   - Verify you're running from the project root directory
-
-2. **OpenAI API errors**
-   - Check your API key is valid and has sufficient credits
-   - Ensure `OPENAI_API_KEY` is set in `.env`
-
-3. **Translation issues**
-   - Some countries may not have full translation support
-   - Queries will default to English if translation fails
-
-### Logging
-
-Enable debug logging by setting:
-```bash
-FLASK_DEBUG=True
-```
+1. **"No module named 'libs'"** - Make sure `PROJECT_DIRECTORY` is set correctly in `.env`
+2. **OpenAI API errors** - Verify your API key is valid and has sufficient credits
+3. **Permission errors** - Ensure the virtual environment is activated
+4. **Port already in use** - The server runs on port 5000 by default
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## Support
-
-For issues and questions, please open an issue on the GitHub repository.
+[Add your license information here]
