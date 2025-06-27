@@ -7,6 +7,82 @@ import time
 import random
 from urllib.parse import quote_plus, urljoin
 import re
+from serpapi.client import SerpAPI
+
+def real_google_search(query: str, location: str = "United States", num_results: int = 10) -> List[Dict[str, Any]]:
+    """
+    Perform real Google search using SerpAPI.
+    
+    Args:
+        query (str): The search query
+        location (str): Geographic location for the search
+        num_results (int): Number of results to return
+        
+    Returns:
+        List[Dict]: List of search results with title, url, snippet, and position
+    """
+    serpapi_key = os.getenv("SERPAPI_KEY")
+    
+    if not serpapi_key:
+        # Fall back to simulation if no API key
+        return simulate_google_search(query, location, num_results)
+    
+    try:
+        # Map location names to SerpAPI location codes
+        location_mapping = {
+            "United States": "us",
+            "United Kingdom": "uk", 
+            "Canada": "ca",
+            "Australia": "au",
+            "Germany": "de",
+            "France": "fr",
+            "Italy": "it",
+            "Spain": "es",
+            "Netherlands": "nl",
+            "Sweden": "se",
+            "Japan": "jp",
+            "South Korea": "kr",
+            "Singapore": "sg",
+            "India": "in",
+            "Brazil": "br"
+        }
+        
+        location_code = location_mapping.get(location, "us")
+        
+        client = Client(api_key=serpapi_key)
+        
+        results = client.search({
+            "q": query,
+            "location": location,
+            "gl": location_code,
+            "num": min(num_results, 10),  # SerpAPI free tier limit
+            "engine": "google"
+        })
+        
+        if "error" in results:
+            print(f"SerpAPI Error: {results['error']}")
+            return simulate_google_search(query, location, num_results)
+        
+        organic_results = results.get("organic_results", [])
+        
+        search_results = []
+        for i, result in enumerate(organic_results[:num_results]):
+            search_results.append({
+                "position": i + 1,
+                "title": result.get("title", ""),
+                "url": result.get("link", ""),
+                "snippet": result.get("snippet", ""),
+                "domain": result.get("displayed_link", "").split('/')[0] if result.get("displayed_link") else "",
+                "location": location,
+                "query": query
+            })
+        
+        return search_results
+        
+    except Exception as e:
+        print(f"SerpAPI search failed: {e}")
+        # Fall back to simulation
+        return simulate_google_search(query, location, num_results)
 
 def simulate_google_search(query: str, location: str = "United States", num_results: int = 10) -> List[Dict[str, Any]]:
     """
@@ -113,8 +189,8 @@ def analyze_brand_presence(brand_name: str, competitors: List[str], queries: Lis
         for query_data in queries:
             query = query_data.get("query", str(query_data)) if isinstance(query_data, dict) else str(query_data)
             
-            # Simulate search for this query in this location
-            search_results = simulate_google_search(query, location)
+            # Search for this query in this location (real or simulated)
+            search_results = real_google_search(query, location)
             
             # Find brand position
             brand_position = None

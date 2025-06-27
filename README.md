@@ -1,14 +1,20 @@
-# Evidentia - Brand Research Tool
+# Evidentia - Generative Engine Optimization (GEO) Tool
 
-🔍 A powerful brand research tool that analyzes companies and generates coherent search queries for brand intelligence gathering.
+🤖 A powerful GEO analysis tool that helps brands understand their positioning in LLM responses and optimize for generative AI engines.
+
+## What is GEO?
+
+**Generative Engine Optimization (GEO)** is the practice of optimizing content and brand positioning for Large Language Models (LLMs) and AI-powered responses, rather than traditional search engines. As users increasingly rely on AI assistants for recommendations and information, GEO becomes crucial for brand visibility.
 
 ## Features
 
-- **Brand Analysis**: Automatically extracts company description, industry, and competitors
-- **Query Generation**: Creates coherent search queries based on brand information
-- **Web Interface**: User-friendly form for easy brand analysis
-- **REST API**: Programmatic access to all functionality
-- **Multi-language Support**: Supports analysis in different languages based on country
+- **LLM Brand Analysis**: Analyze how your brand appears in AI responses across different models
+- **Query Generation**: Creates test queries to evaluate brand positioning
+- **Multi-Model Testing**: Test across GPT-4, GPT-3.5, and other LLM models
+- **Sentiment Analysis**: Understand how AI portrays your brand (positive/neutral/negative)
+- **Competitor Comparison**: See how competitors are positioned in AI responses
+- **Optimization Suggestions**: Get actionable GEO improvement recommendations
+- **Real-time Streaming**: Watch analysis progress in real-time
 
 ## Prerequisites
 
@@ -39,10 +45,13 @@
    cp .env.example .env
    ```
    
-   Edit `.env` and add your OpenAI API key:
+   Edit `.env` and add your API keys:
    ```
    OPENAI_API_KEY=your_openai_api_key_here
    PROJECT_DIRECTORY=/path/to/your/evidentia/directory
+   
+   # Optional - for real Google search results (100 free searches/month)
+   SERPAPI_KEY=your_serpapi_key_here
    ```
 
 ## Usage
@@ -58,12 +67,13 @@
 2. **Open your browser**
    Navigate to `http://127.0.0.1:5000`
 
-3. **Use the form**
+3. **Use the GEO analysis**
    - Enter brand name (e.g., "jethr")
    - Enter brand website (e.g., "jethr.com")
    - Optionally specify country (defaults to "world")
    - Click "Analyze Brand" to get company information
-   - Click "Generate Queries" to create search queries
+   - Click "Generate Queries" to create LLM test queries
+   - Click "Test Queries & Rankings" to analyze brand positioning in AI responses
 
 ### API Endpoints
 
@@ -79,7 +89,7 @@ Content-Type: application/json
 }
 ```
 
-#### Generate Queries
+#### Generate LLM Test Queries
 ```bash
 POST /generate-queries
 Content-Type: application/json
@@ -90,6 +100,19 @@ Content-Type: application/json
   "brandDescription": "Company description...",
   "brandIndustry": "Technology",
   "totalQueries": 10
+}
+```
+
+#### GEO Analysis (LLM Brand Positioning)
+```bash
+POST /stream-test-queries
+Content-Type: application/json
+
+{
+  "brandName": "Company Name",
+  "queries": ["What are the best tech companies?", "Recommend software tools"],
+  "competitors": ["Competitor1", "Competitor2"],
+  "models": ["gpt-4o-mini-2024-07-18", "gpt-3.5-turbo"]
 }
 ```
 
@@ -152,12 +175,20 @@ The application uses the following environment variables:
 - `OPENAI_API_KEY`: Your OpenAI API key (required)
 - `PROJECT_DIRECTORY`: Absolute path to the project directory (required)
 
+### Understanding GEO vs SEO
+
+**Traditional SEO** focuses on optimizing for search engine rankings (Google, Bing, etc.)
+**GEO (Generative Engine Optimization)** focuses on optimizing for AI assistant responses (ChatGPT, Claude, etc.)
+
+This tool helps you understand and improve your **GEO performance** - how your brand appears when users ask AI assistants for recommendations, comparisons, or information.
+
 ## Dependencies
 
 - `openai>=1.0.0` - OpenAI API client
 - `langchain>=0.1.0` - LangChain for prompt templates
 - `python-dotenv>=1.0.0` - Environment variable management
 - `flask>=2.0.0` - Web framework
+- `pocketflow` - Additional utilities for data flow
 
 ## Development
 
