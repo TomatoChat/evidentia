@@ -118,6 +118,7 @@
             
             <button type="submit" id="analyzeBtn">🚀 Analyze Brand</button>
             <button type="button" id="generateQueriesBtn" disabled>📝 Generate Queries</button>
+            <button type="button" id="testQueriesBtn" disabled>🌍 Test Queries & Rankings</button>
         </form>
 
         <div class="loading" id="loading">
@@ -140,11 +141,25 @@
                 </div>
                 <div id="queriesContent"></div>
             </div>
+
+            <div class="step" id="testingSection" style="display: none;">
+                <h3>🌍 Geographic Testing & Brand Rankings</h3>
+                <div class="form-group">
+                    <label for="testLocations">Select Locations to Test:</label>
+                    <select id="testLocations" multiple style="height: 120px;">
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                    <small>Hold Ctrl/Cmd to select multiple locations</small>
+                </div>
+                <div id="analysisContent"></div>
+            </div>
         </div>
     </div>
 
     <script>
         let brandData = null;
+        let generatedQueries = null;
+        let availableLocations = [];
 
         document.getElementById('brandForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -159,6 +174,10 @@
         document.getElementById('generateQueriesBtn').addEventListener('click', async function() {
             const totalQueries = parseInt(document.getElementById('totalQueries').value) || 10;
             await generateQueries(totalQueries);
+        });
+
+        document.getElementById('testQueriesBtn').addEventListener('click', async function() {
+            await testQueries();
         });
 
         async function analyzeBrand(brandName, brandWebsite, brandCountry) {
@@ -187,6 +206,7 @@
                 brandData = data;
                 displayBrandInfo(data);
                 document.getElementById('generateQueriesBtn').disabled = false;
+                await loadLocations();
                 
             } catch (error) {
                 showError('Error analyzing brand: ' + error.message);
@@ -225,10 +245,94 @@
                     throw new Error(data.error || 'Failed to generate queries');
                 }
 
+                generatedQueries = data.queries;
                 displayQueries(data.queries);
+                document.getElementById('testQueriesBtn').disabled = false;
                 
             } catch (error) {
                 showError('Error generating queries: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadLocations() {
+            try {
+                const response = await fetch('/get-locations');
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to load locations');
+                }
+
+                availableLocations = data.locations;
+                populateLocationSelect();
+                
+            } catch (error) {
+                console.error('Error loading locations:', error);
+            }
+        }
+
+        function populateLocationSelect() {
+            const select = document.getElementById('testLocations');
+            select.innerHTML = '';
+            
+            availableLocations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location;
+                option.textContent = location;
+                if (location === 'United States') {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+
+        async function testQueries() {
+            if (!brandData || !generatedQueries) {
+                showError('Please analyze brand and generate queries first');
+                return;
+            }
+
+            const selectedOptions = Array.from(document.getElementById('testLocations').selectedOptions);
+            const selectedLocations = selectedOptions.map(option => option.value);
+            
+            if (selectedLocations.length === 0) {
+                showError('Please select at least one location to test');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            
+            try {
+                const competitors = Array.isArray(brandData.competitors) ? 
+                    brandData.competitors : 
+                    Object.values(brandData.competitors || {}).flat();
+
+                const response = await fetch('/test-queries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        brandName: brandData.name,
+                        queries: generatedQueries,
+                        competitors: competitors,
+                        locations: selectedLocations
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to test queries');
+                }
+
+                displayAnalysis(data);
+                
+            } catch (error) {
+                showError('Error testing queries: ' + error.message);
             } finally {
                 showLoading(false);
             }
@@ -253,6 +357,74 @@
             content.innerHTML = `<pre>${JSON.stringify(queries, null, 2)}</pre>`;
             
             document.getElementById('queriesSection').style.display = 'block';
+        }
+
+        function displayAnalysis(analysis) {
+            const content = document.getElementById('analysisContent');
+            
+            const overallMetrics = analysis.overall_metrics;
+            const locationPerformance = analysis.location_performance;
+            const competitorAnalysis = analysis.competitor_analysis;
+            
+            let html = `
+                <h4>📈 Overall Performance</h4>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                    <p><strong>Visibility Score:</strong> ${overallMetrics.visibility_score.toFixed(1)}%</p>
+                    <p><strong>Average Position:</strong> ${overallMetrics.average_position > 0 ? overallMetrics.average_position.toFixed(1) : 'Not found'}</p>
+                    <p><strong>Queries in Top 10:</strong> ${overallMetrics.queries_in_top_10} / ${analysis.total_queries_tested}</p>
+                    <p><strong>Queries Not Found:</strong> ${overallMetrics.queries_not_found}</p>
+                </div>
+
+                <h4>🌍 Performance by Location</h4>
+            `;
+            
+            for (const [location, metrics] of Object.entries(locationPerformance)) {
+                html += `
+                    <div style="background: #e9ecef; padding: 10px; margin: 5px 0; border-radius: 3px;">
+                        <strong>${location}:</strong> 
+                        Visibility ${metrics.visibility_score.toFixed(1)}% | 
+                        Avg Position: ${metrics.average_position > 0 ? metrics.average_position.toFixed(1) : 'N/A'}
+                    </div>
+                `;
+            }
+            
+            if (Object.keys(competitorAnalysis).length > 0) {
+                html += `<h4>🥊 Competitor Analysis</h4>`;
+                for (const [competitor, data] of Object.entries(competitorAnalysis)) {
+                    html += `
+                        <div style="background: #fff3cd; padding: 10px; margin: 5px 0; border-radius: 3px;">
+                            <strong>${competitor}:</strong> 
+                            ${data.appearances} appearances | 
+                            Avg Position: ${data.average_position.toFixed(1)}
+                        </div>
+                    `;
+                }
+            }
+            
+            html += `
+                <h4>🔍 Detailed Query Performance</h4>
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+            `;
+            
+            analysis.query_performance.forEach(query => {
+                const statusIcon = query.brand_found ? '✅' : '❌';
+                const position = query.brand_position ? `#${query.brand_position}` : 'Not found';
+                
+                html += `
+                    <div style="margin: 10px 0; padding: 10px; background: ${query.brand_found ? '#d4edda' : '#f8d7da'}; border-radius: 3px;">
+                        <strong>${statusIcon} "${query.query}" (${query.location})</strong><br>
+                        Position: ${position}
+                        ${query.competitors_found.length > 0 ? 
+                            `<br>Competitors found: ${query.competitors_found.map(c => `${c.name} (#${c.position})`).join(', ')}` 
+                            : ''}
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            
+            content.innerHTML = html;
+            document.getElementById('testingSection').style.display = 'block';
         }
 
         function showLoading(show) {

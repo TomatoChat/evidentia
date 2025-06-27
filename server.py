@@ -11,6 +11,7 @@ load_dotenv(dotenv_path='.env', override=True)
 from flask import Flask, request, jsonify, render_template
 import libs.utils as utils
 import libs.openai as openaiAnalytics
+import libs.search_analysis as search_analysis
 
 app = Flask(__name__)
 
@@ -61,6 +62,58 @@ def generate_queries():
             brand_name, brand_country, brand_description, brand_industry, total_queries
         )
         return jsonify({'queries': queries})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/test-queries', methods=['POST'])
+def test_queries():
+    try:
+        data = request.json
+        brand_name = data.get('brandName')
+        queries = data.get('queries', [])
+        competitors = data.get('competitors', [])
+        locations = data.get('locations', ['United States'])
+        
+        if not brand_name or not queries:
+            return jsonify({'error': 'brandName and queries are required'}), 400
+        
+        # Extract query strings from query objects if needed
+        query_strings = []
+        for q in queries:
+            if isinstance(q, dict):
+                query_strings.append(q.get('query', str(q)))
+            else:
+                query_strings.append(str(q))
+        
+        analysis = search_analysis.analyze_brand_presence(
+            brand_name, competitors, query_strings, locations
+        )
+        return jsonify(analysis)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-locations', methods=['GET'])
+def get_locations():
+    try:
+        locations = search_analysis.generate_geo_locations()
+        return jsonify({'locations': locations})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/get-search-suggestions', methods=['POST'])
+def get_search_suggestions():
+    try:
+        data = request.json
+        brand_name = data.get('brandName')
+        industry = data.get('industry', '')
+        
+        if not brand_name:
+            return jsonify({'error': 'brandName is required'}), 400
+        
+        suggestions = search_analysis.get_search_suggestions(brand_name, industry)
+        return jsonify({'suggestions': suggestions})
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
