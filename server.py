@@ -14,6 +14,7 @@ import time
 import libs.utils as utils
 import libs.openai as openaiAnalytics
 import libs.geo_analysis as geo_analysis
+import libs.search_analysis as search_analysis
 
 app = Flask(__name__)
 
@@ -215,7 +216,6 @@ def stream_test_queries():
     
     def generate():
         try:
-            
             if not brand_name or not queries:
                 yield f"data: {json.dumps({'error': 'brandName and queries are required'})}\n\n"
                 return
@@ -228,99 +228,29 @@ def stream_test_queries():
                 else:
                     query_strings.append(str(q))
             
-            
             yield f"data: {json.dumps({'status': f'Starting GEO analysis for {len(query_strings)} queries across {len(llm_models)} LLM models...', 'step': 'init', 'progress': 0})}\n\n"
-            time.sleep(0.1)
             
-            # Create a simple progress tracking approach
-            total_queries = len(query_strings)
-            total_models = len(llm_models)
-            total_tests = total_queries * total_models
+            # Use the regular (non-streaming) geo_analysis function for now
+            analysis_results = geo_analysis.analyze_llm_brand_positioning(
+                brand_name=brand_name,
+                competitors=competitors,
+                queries=query_strings,
+                llm_models=llm_models
+            )
             
-            yield f"data: {json.dumps({'status': f'Initializing GEO analysis for {total_queries} queries across {total_models} models...', 'step': 'init', 'progress': 10})}\n\n"
+            yield f"data: {json.dumps({'status': 'GEO analysis computation complete!', 'step': 'analysis_complete', 'progress': 85})}\n\n"
             
-            # Run a simplified version of the analysis with manual progress updates
-            try:
-                import os
-                from openai import OpenAI
-                
-                api_key = os.getenv("OPENAI_API_KEY")
-                if not api_key:
-                    raise ValueError("OPENAI_API_KEY environment variable is not set")
-                
-                client = OpenAI(api_key=api_key)
-                
-                analysis_results = {
-                    "brand_name": brand_name,
-                    "total_queries_tested": len(query_strings),
-                    "llm_models_tested": llm_models,
-                    "query_performance": [],
-                    "model_performance": {},
-                    "competitor_analysis": {},
-                    "overall_metrics": {
-                        "mention_rate": 0,
-                        "positive_positioning": 0,
-                        "neutral_positioning": 0,
-                        "negative_positioning": 0,
-                        "average_mention_position": 0,
-                        "brand_visibility_score": 0
-                    }
-                }
-                
-                current_test = 0
-                total_mentions = 0
-                
-                for model_idx, model in enumerate(llm_models):
-                    yield f"data: {json.dumps({'status': f'Starting analysis with {model}...', 'step': 'model_start', 'progress': 20 + (model_idx * 60 // len(llm_models))})}\n\n"
-                    
-                    for query_idx, query in enumerate(query_strings):
-                        current_test += 1
-                        progress = 20 + (current_test / total_tests) * 60
-                        
-                        yield f"data: {json.dumps({'status': f'Testing query {query_idx + 1}/{len(query_strings)} with {model}', 'step': 'query_test', 'progress': progress})}\n\n"
-                        
-                        # Simulate some work (in real implementation, this would call the LLM)
-                        import time
-                        time.sleep(0.5)  # Small delay to show progress
-                        
-                        # For now, just add a placeholder result
-                        query_performance = {
-                            "query": query,
-                            "model": model,
-                            "llm_response": f"Sample response for: {query}",
-                            "brand_mentioned": query_idx % 3 == 0,  # Simple pattern for demo
-                            "mention_position": 1 if query_idx % 3 == 0 else None,
-                            "sentiment": "neutral",
-                            "context": "test context",
-                            "competitors_mentioned": [],
-                            "response_length": 50
-                        }
-                        
-                        analysis_results["query_performance"].append(query_performance)
-                        
-                        if query_performance["brand_mentioned"]:
-                            total_mentions += 1
-                
-                # Calculate final metrics
-                if total_tests > 0:
-                    analysis_results["overall_metrics"]["mention_rate"] = (total_mentions / total_tests) * 100
-                    analysis_results["overall_metrics"]["brand_visibility_score"] = (total_mentions / total_tests) * 100
-                
-                yield f"data: {json.dumps({'status': 'GEO analysis computation complete!', 'step': 'complete', 'progress': 85})}\n\n"
-                
-            except Exception as analysis_error:
-                yield f"data: {json.dumps({'error': f'Analysis error: {str(analysis_error)}'})}\n\n"
-                return
-            
+            # Generate optimization suggestions
             yield f"data: {json.dumps({'status': 'Generating optimization suggestions...', 'step': 'suggestions', 'progress': 95})}\n\n"
-            
-            # Add GEO optimization suggestions
             suggestions = geo_analysis.get_geo_optimization_suggestions(analysis_results)
             analysis_results["optimization_suggestions"] = suggestions
             
             yield f"data: {json.dumps({'status': 'GEO Analysis complete!', 'step': 'complete', 'progress': 100, 'result': analysis_results})}\n\n"
             
         except Exception as e:
+            print(f"Error in stream_test_queries: {e}")
+            import traceback
+            traceback.print_exc()
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
     
     return Response(generate(), mimetype='text/event-stream')
