@@ -15,6 +15,7 @@
 - **🎯 Sentiment & Positioning Analysis**: Deep understanding of how AI portrays your brand (positive/neutral/negative)
 - **🥊 Competitive Intelligence**: Advanced competitor analysis and positioning comparison
 - **📈 Performance Metrics**: Comprehensive metrics including mention rates, positioning scores, and visibility analytics
+- **🔍 Real-Time Web Search**: OpenAI Responses API integration with web search capabilities for current market intelligence
 
 ### Real-Time Experience
 - **⚡ Real-time Streaming Analysis**: Watch analysis progress with live updates and detailed logs
@@ -172,6 +173,30 @@ Content-Type: application/json
 }
 ```
 
+#### 🔍 Web Search & Analysis
+```bash
+POST /web-search
+Content-Type: application/json
+
+{
+  "query": "latest trends in AI automation tools",
+  "context": "small business market analysis"
+}
+```
+Returns structured web search results with analysis and insights.
+
+#### ⚡ Streaming Web Search
+```bash
+POST /stream-web-search
+Content-Type: application/json
+
+{
+  "query": "competitor analysis for tech companies",
+  "context": "market positioning research"
+}
+```
+Returns real-time streaming web search with progress updates.
+
 #### Legacy Endpoints (Non-Streaming)
 ```bash
 POST /brand-info          # Basic brand information
@@ -179,6 +204,16 @@ POST /generate-queries    # Generate test queries
 POST /test-queries       # Basic GEO analysis
 GET /health             # Health check
 ```
+
+### 🔍 Web Search Integration
+
+The platform now includes advanced web search capabilities powered by OpenAI's Responses API:
+
+- **Real-time web search** with current market data
+- **Structured analysis** of search results with insights and sources
+- **Quality assessment** of search information (high/medium/low)
+- **Source attribution** with URLs and relevant excerpts
+- **Streaming progress** updates during search operations
 
 ### Jupyter Notebook
 
@@ -199,6 +234,12 @@ queries = openaiAnalytics.getCoherentQueries(
     brand_info['industry'], 
     10
 )
+
+# Perform web search and analysis
+search_results = openaiAnalytics.webSearchAndAnalyze(
+    "latest AI automation trends 2024",
+    "market research for technology companies"
+)
 ```
 
 ## 📁 Project Structure
@@ -208,7 +249,7 @@ evidentia/
 ├── libs/                   # Core analysis libraries
 │   ├── geo_analysis.py     # 🌍 GEO analysis engine with streaming support
 │   ├── search_analysis.py  # 🔍 Search analysis and ranking functions
-│   ├── openai.py          # 🤖 OpenAI integration and LLM utilities
+│   ├── openai.py          # 🤖 OpenAI Responses API integration with web search
 │   └── utils.py           # 🛠️ Brand analysis and utility functions
 ├── prompts/               # 📝 AI prompt templates
 │   ├── brandDescription.txt    # Prompt for brand description extraction
