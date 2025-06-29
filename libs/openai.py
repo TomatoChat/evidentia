@@ -39,7 +39,7 @@ def getResponseInfo(response) -> tuple[dict, dict]:
 
 def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str, brandIndustry: str, totalQueries: int = 100):
     """
-    Generates a set of coherent queries related to a brand using an LLM (OpenAI) and a prompt template.
+    Generates a set of coherent queries related to a brand using an LLM (OpenAI) with web search capabilities.
 
     Args:
         brandName (str): The name of the brand/company.
@@ -57,53 +57,61 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
         raise ValueError("OPENAI_API_KEY environment variable is not set")
     llmClient = OpenAI(api_key=api_key)
 
-    # Load the prompt template for generating queries from file
-    with open("prompts/brandPromptsGeneration.txt", "r", encoding="utf-8") as file:
-        promptTemplate = file.read()
+    try:
+        # Load the prompt template for generating queries from file
+        with open("prompts/brandPromptsGeneration.txt", "r", encoding="utf-8") as file:
+            promptTemplate = file.read()
 
-    # Format the prompt with the provided brand information and total queries
-    prompt = PromptTemplate(
-        input_variables=["companyName", "companyCountry", "companyDescription", "companyIndustry", "totalQueries"],
-        template=promptTemplate
-    ).format(
-        companyName=brandName,
-        companyCountry=brandCountry,
-        companyDescription=brandDescription,
-        companyIndustry=brandIndustry,
-        totalQueries=totalQueries
-    )
+        # Format the prompt with the provided brand information and total queries
+        prompt = PromptTemplate(
+            input_variables=["companyName", "companyCountry", "companyDescription", "companyIndustry", "totalQueries"],
+            template=promptTemplate
+        ).format(
+            companyName=brandName,
+            companyCountry=brandCountry,
+            companyDescription=brandDescription,
+            companyIndustry=brandIndustry,
+            totalQueries=totalQueries
+        )
 
-    # # Get the target language for the brand's country, defaulting to English
-    # targetLanguage = countryLanguages.get(brandCountry.lower(), 'english').lower()
+        # Call the OpenAI Responses API with web search enabled for better query generation
+        response = llmClient.responses.create(
+            model="gpt-4o-mini-2024-07-18",
+            tools=[{"type": "web_search_preview"}],
+            input=prompt,
+        )
+        
+        # Extract response information
+        messagesAnnotations, messagesTexts = getResponseInfo(response)
+        rawJson = next(iter(messagesTexts.values()), "")
 
-    # # Translate the prompt if the target language is not English and translation is successful
-    # if targetLanguage != 'english':
-    #     translatedPrompt = utils.translateString(prompt, targetLanguage)
-    #     if 'NULL' not in translatedPrompt:
-    #         prompt = translatedPrompt
+        # Clean up JSON formatting
+        if rawJson.startswith("```json"):
+            rawJson = rawJson[len("```json"):].strip()
+        if rawJson.endswith("```"):
+            rawJson = rawJson[:-3].strip()
 
-    # Call the OpenAI API to generate the queries with web search enabled
-    response = llmClient.responses.create(
-        model="gpt-4o-mini-2024-07-18",
-        tools=[{"type": "web_search_preview"}],
-        input=prompt,
-    )
-    # Extract the competitors from the response
-    _, messagesTexts = getResponseInfo(response)
-    rawJson = next(iter(messagesTexts.values()), "")
+        if not rawJson.strip():
+            raise ValueError("No JSON output received from OpenAI API.")
 
-    # Remove code block markers if present
-    if rawJson.startswith("```json"):
-        rawJson = rawJson[len("```json"):].strip()
-    
-    if rawJson.endswith("```"):
-        rawJson = rawJson[:-3].strip()
-
-    if not rawJson.strip():
-        raise ValueError("No JSON output received from OpenAI API.")
-
-    # Parse and return the JSON as a Python dictionary
-    return json.loads(rawJson)
+        # Parse and return the JSON as a Python dictionary
+        queries_result = json.loads(rawJson)
+        
+        # Log web search annotations if available for debugging
+        if messagesAnnotations:
+            logging.info(f"Web search annotations available for query generation: {len(messagesAnnotations)} messages")
+        
+        return queries_result
+        
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse JSON from query generation response: {e}")
+        raise ValueError(f"Invalid JSON response from OpenAI API: {e}")
+    except FileNotFoundError:
+        logging.error("Brand prompt template file not found")
+        raise ValueError("Brand prompt template file 'prompts/brandPromptsGeneration.txt' not found")
+    except Exception as e:
+        logging.error(f"Query generation failed: {e}")
+        raise ValueError(f"Failed to generate queries: {e}")
 
 
 def webSearchAndAnalyze(query: str, context: str = "") -> dict:
