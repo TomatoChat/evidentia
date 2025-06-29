@@ -413,6 +413,101 @@ The server will automatically reload when you make changes to the code.
 }
 ```
 
+### Web Search Analysis Response
+```json
+{
+  "summary": "Latest AI automation trends show increased adoption of conversational AI, workflow automation platforms, and no-code solutions for small businesses.",
+  "key_insights": [
+    "70% increase in small business AI tool adoption in 2024",
+    "Conversational AI and chatbots leading market growth",
+    "No-code automation platforms becoming dominant"
+  ],
+  "sources": [
+    {
+      "title": "AI Automation Trends 2024 Report",
+      "url": "https://example.com/ai-trends-2024",
+      "snippet": "Small businesses are rapidly adopting AI automation tools..."
+    },
+    {
+      "title": "Market Research: Business Automation Growth",
+      "url": "https://example.com/automation-market",
+      "snippet": "The automation market is expected to reach $35B by 2025..."
+    }
+  ],
+  "search_quality": "high",
+  "last_updated": "recent",
+  "web_search_annotations": {
+    "msg_001": [
+      {
+        "type": "web_search",
+        "search_query": "AI automation trends 2024 small business",
+        "results_count": 15
+      }
+    ]
+  }
+}
+```
+
+### Formatted Query Analysis Report
+
+Here's how to format detailed query analysis results for better readability:
+
+```markdown
+# 📊 Detailed Query Analysis Report
+
+## Query Performance Summary
+- **Total Queries Tested**: 2
+- **LLM Model**: gpt-4o-mini-2024-07-18
+- **Brand**: Jethr
+- **Overall Performance**: ❌ No mentions detected
+
+---
+
+## 🔍 Individual Query Results
+
+### Query #1: Workflow Automation Discovery
+**Topic**: Discover workflow automation tools  
+**Prompt**: "Find me a software tool that automates workflow processes for small businesses in Italy."
+
+| Metric | Result |
+|--------|--------|
+| **Status** | ❌ Not Mentioned |
+| **Sentiment** | 😐 Neutral |
+| **Brand Context** | No mention of Jethr in the response |
+
+**LLM Response Preview**:
+> "Here are some software tools that can help automate workflow processes for small businesses in Italy: 1. **Zapier**: This tool allows you to connect..."
+
+**Analysis**: The response focused on established automation platforms like Zapier, without mentioning Jethr. This indicates low brand awareness in the workflow automation space.
+
+---
+
+### Query #2: Implementation Strategy Guide
+**Topic**: Step-by-step implementation plan  
+**Prompt**: "Create a step-by-step guide for implementing a business automation strategy in a local Italian company."
+
+| Metric | Result |
+|--------|--------|
+| **Status** | ❌ Not Mentioned |
+| **Sentiment** | 😐 Neutral |
+| **Brand Context** | No mention of the brand Jethr |
+
+**LLM Response Preview**:
+> "### Step-by-Step Implementation Plan for a Business Automation Strategy in a Local Italian Company Implementing a business automation strategy can st..."
+
+**Analysis**: The response provided generic implementation guidance without referencing Jethr as a potential solution provider.
+
+---
+
+## 📈 Optimization Recommendations
+
+1. **🎯 Increase Content Marketing**: Create more content around workflow automation for Italian SMBs
+2. **🔍 SEO & GEO Strategy**: Optimize for queries about "Italian business automation" and "workflow tools Italy"
+3. **📝 Case Studies**: Develop Italian customer success stories and implementation guides
+4. **🤝 Partnerships**: Consider partnerships with Italian business organizations
+5. **🌍 Local Presence**: Strengthen Italian market presence and localization
+```
+
 ## Troubleshooting
 
 1. **"No module named 'libs'"** - Make sure `PROJECT_DIRECTORY` is set correctly in `.env`

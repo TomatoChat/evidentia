@@ -416,3 +416,116 @@ def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world
         "competitors": brandCompetitors,
         "name": brandName
     }
+
+
+def formatQueryAnalysis(raw_analysis: str) -> str:
+    """
+    Formats raw query analysis output into a readable markdown format.
+    
+    Args:
+        raw_analysis (str): Raw query analysis text
+    
+    Returns:
+        str: Formatted markdown analysis report
+    """
+    import re
+    
+    # Split by lines and process each query result
+    lines = raw_analysis.strip().split('\n')
+    
+    formatted_output = []
+    formatted_output.append("# 📊 Detailed Query Analysis Report\n")
+    
+    # Extract brand name from context if available
+    brand_match = re.search(r'Context:.*?mention of (?:the brand )?([A-Z][a-z]+)', raw_analysis)
+    brand_name = brand_match.group(1) if brand_match else "Brand"
+    
+    # Count total queries
+    query_count = len([line for line in lines if line.startswith('❌') or line.startswith('✅')])
+    
+    formatted_output.append("## Query Performance Summary")
+    formatted_output.append(f"- **Total Queries Tested**: {query_count}")
+    formatted_output.append("- **LLM Model**: gpt-4o-mini-2024-07-18")
+    formatted_output.append(f"- **Brand**: {brand_name}")
+    formatted_output.append("- **Overall Performance**: ❌ No mentions detected\n")
+    formatted_output.append("---\n")
+    formatted_output.append("## 🔍 Individual Query Results\n")
+    
+    query_num = 1
+    current_query = {}
+    
+    for line in lines:
+        line = line.strip()
+        
+        if line.startswith('❌') or line.startswith('✅'):
+            # Parse query line
+            status_icon = '❌' if line.startswith('❌') else '✅'
+            
+            # Extract topic and prompt from the complex format
+            topic_match = re.search(r"'topic': '([^']+)'", line)
+            prompt_match = re.search(r"'prompt': '([^']+)'", line)
+            model_match = re.search(r'\(([^)]+)\)', line)
+            
+            topic = topic_match.group(1) if topic_match else f"Query {query_num}"
+            prompt = prompt_match.group(1) if prompt_match else "No prompt available"
+            model = model_match.group(1) if model_match else "gpt-4o-mini-2024-07-18"
+            
+            current_query = {
+                'status_icon': status_icon,
+                'topic': topic,
+                'prompt': prompt,
+                'model': model,
+                'number': query_num
+            }
+            
+        elif line.startswith('Not mentioned') or line.startswith('Mentioned'):
+            # Parse status and sentiment
+            parts = line.split('|')
+            status = parts[0].strip()
+            sentiment = parts[1].strip().replace('Sentiment: ', '') if len(parts) > 1 else 'neutral'
+            
+            current_query['status'] = status
+            current_query['sentiment'] = sentiment
+            
+        elif line.startswith('Context:'):
+            current_query['context'] = line.replace('Context: ', '').strip()
+            
+        elif line.startswith('LLM Response:'):
+            current_query['response'] = line.replace('LLM Response: ', '').strip()
+            
+            # Output formatted query when we have all parts
+            if 'topic' in current_query:
+                formatted_output.append(f"### Query #{current_query['number']}: {current_query['topic']}")
+                formatted_output.append(f"**Prompt**: \"{current_query['prompt']}\"\n")
+                
+                formatted_output.append("| Metric | Result |")
+                formatted_output.append("|--------|--------|")
+                formatted_output.append(f"| **Status** | {current_query['status_icon']} {current_query['status']} |")
+                
+                sentiment_icon = "😊" if "positive" in current_query['sentiment'] else "😐" if "neutral" in current_query['sentiment'] else "😞"
+                formatted_output.append(f"| **Sentiment** | {sentiment_icon} {current_query['sentiment'].title()} |")
+                formatted_output.append(f"| **Brand Context** | {current_query.get('context', 'No context available')} |\n")
+                
+                formatted_output.append("**LLM Response Preview**:")
+                response_preview = current_query['response'][:100] + "..." if len(current_query['response']) > 100 else current_query['response']
+                formatted_output.append(f"> {response_preview}\n")
+                
+                # Add analysis based on status
+                if current_query['status_icon'] == '❌':
+                    formatted_output.append(f"**Analysis**: The query did not mention {brand_name}, indicating low brand awareness for this search intent. Consider optimizing content for this topic area.\n")
+                else:
+                    formatted_output.append(f"**Analysis**: {brand_name} was mentioned, showing good brand visibility for this query type.\n")
+                
+                formatted_output.append("---\n")
+                query_num += 1
+                current_query = {}
+    
+    # Add optimization recommendations
+    formatted_output.append("## 📈 Optimization Recommendations\n")
+    formatted_output.append("1. **🎯 Content Strategy**: Create targeted content addressing the query topics where brand wasn't mentioned")
+    formatted_output.append("2. **🔍 SEO & GEO Optimization**: Optimize for the specific phrases and contexts tested")
+    formatted_output.append("3. **📝 Thought Leadership**: Develop authoritative content in relevant topic areas")
+    formatted_output.append("4. **🤝 Industry Presence**: Increase visibility in industry discussions and platforms")
+    formatted_output.append("5. **📊 Regular Monitoring**: Set up regular GEO monitoring for these query types")
+    
+    return '\n'.join(formatted_output)

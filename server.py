@@ -313,6 +313,21 @@ def stream_web_search():
     
     return Response(generate(), mimetype='text/event-stream')
 
+@app.route('/format-query-analysis', methods=['POST'])
+def format_query_analysis():
+    try:
+        data = request.json
+        raw_analysis = data.get('rawAnalysis')
+        
+        if not raw_analysis:
+            return jsonify({'error': 'rawAnalysis is required'}), 400
+        
+        formatted_analysis = utils.formatQueryAnalysis(raw_analysis)
+        return jsonify({'formatted_analysis': formatted_analysis})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy'})
