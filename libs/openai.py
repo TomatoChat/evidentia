@@ -1,10 +1,7 @@
-import sys
 import os
-
 import json
 from langchain.prompts import PromptTemplate
 from openai import OpenAI
-import libs.utils as utils
 import logging
 
 
@@ -85,14 +82,14 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
     #     if 'NULL' not in translatedPrompt:
     #         prompt = translatedPrompt
 
-    # Call the OpenAI API to generate the queries
+    # Call the OpenAI API to generate the queries with web search enabled
     response = llmClient.responses.create(
         model="gpt-4o-mini-2024-07-18",
         tools=[{"type": "web_search_preview"}],
         input=prompt,
     )
     # Extract the competitors from the response
-    messagesAnnotations, messagesTexts = getResponseInfo(response)
+    _, messagesTexts = getResponseInfo(response)
     rawJson = next(iter(messagesTexts.values()), "")
 
     # Remove code block markers if present
@@ -107,3 +104,99 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
 
     # Parse and return the JSON as a Python dictionary
     return json.loads(rawJson)
+
+
+def webSearchAndAnalyze(query: str, context: str = "") -> dict:
+    """
+    Performs web search using OpenAI's Responses API and analyzes the results.
+    
+    Args:
+        query (str): The search query to execute
+        context (str, optional): Additional context for the analysis
+    
+    Returns:
+        dict: Contains search results, analysis, and web search annotations
+    """
+    # Initialize the OpenAI client
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    llmClient = OpenAI(api_key=api_key)
+    
+    # Construct the prompt for web search and analysis
+    prompt = f"""
+    Please search the web for information about: {query}
+    
+    {f"Additional context: {context}" if context else ""}
+    
+    After searching, please provide:
+    1. A summary of the key findings
+    2. The most relevant sources and URLs
+    3. Any important insights or trends identified
+    
+    Format your response as JSON with the following structure:
+    {{
+        "summary": "Brief summary of findings",
+        "key_insights": ["insight 1", "insight 2", "insight 3"],
+        "sources": [
+            {{"title": "Source title", "url": "https://example.com", "snippet": "relevant excerpt"}},
+            {{"title": "Source title 2", "url": "https://example2.com", "snippet": "relevant excerpt"}}
+        ],
+        "search_quality": "high/medium/low",
+        "last_updated": "recent/moderate/outdated"
+    }}
+    """
+    
+    try:
+        # Call the OpenAI Responses API with web search enabled
+        response = llmClient.responses.create(
+            model="gpt-4o-mini-2024-07-18",
+            tools=[{"type": "web_search_preview"}],
+            input=prompt,
+        )
+        
+        # Extract response information including web search annotations
+        messagesAnnotations, messagesTexts = getResponseInfo(response)
+        
+        # Get the main response text
+        rawJson = next(iter(messagesTexts.values()), "")
+        
+        # Clean up JSON formatting
+        if rawJson.startswith("```json"):
+            rawJson = rawJson[len("```json"):].strip()
+        if rawJson.endswith("```"):
+            rawJson = rawJson[:-3].strip()
+            
+        if not rawJson.strip():
+            raise ValueError("No JSON output received from web search.")
+        
+        # Parse the JSON response
+        analysis_result = json.loads(rawJson)
+        
+        # Add web search annotations to the result
+        analysis_result["web_search_annotations"] = messagesAnnotations
+        analysis_result["raw_response"] = messagesTexts
+        
+        return analysis_result
+        
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse JSON from web search response: {e}")
+        return {
+            "error": "Failed to parse search results",
+            "raw_response": rawJson,
+            "summary": "Search completed but response format was invalid",
+            "key_insights": [],
+            "sources": [],
+            "search_quality": "low",
+            "last_updated": "unknown"
+        }
+    except Exception as e:
+        logging.error(f"Web search failed: {e}")
+        return {
+            "error": str(e),
+            "summary": "Web search failed to complete",
+            "key_insights": [],
+            "sources": [],
+            "search_quality": "failed",
+            "last_updated": "unknown"
+        }

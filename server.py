@@ -255,6 +255,64 @@ def stream_test_queries():
     
     return Response(generate(), mimetype='text/event-stream')
 
+@app.route('/web-search', methods=['POST'])
+def web_search():
+    try:
+        data = request.json
+        query = data.get('query')
+        context = data.get('context', '')
+        
+        if not query:
+            return jsonify({'error': 'query is required'}), 400
+        
+        search_results = openaiAnalytics.webSearchAndAnalyze(query, context)
+        return jsonify(search_results)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/stream-web-search', methods=['POST'])
+def stream_web_search():
+    # Get request data outside the generator function
+    data = request.json
+    query = data.get('query')
+    context = data.get('context', '')
+    
+    def generate():
+        try:
+            if not query:
+                yield f"data: {json.dumps({'error': 'query is required'})}\n\n"
+                return
+            
+            yield f"data: {json.dumps({'status': 'Initializing web search...', 'step': 'init'})}\n\n"
+            time.sleep(0.1)
+            
+            yield f"data: {json.dumps({'status': f'Searching for: {query}', 'step': 'searching'})}\n\n"
+            
+            # Perform the web search and analysis
+            search_results = openaiAnalytics.webSearchAndAnalyze(query, context)
+            
+            if 'error' in search_results:
+                yield f"data: {json.dumps({'error': search_results['error'], 'step': 'error'})}\n\n"
+                return
+            
+            yield f"data: {json.dumps({'status': 'Processing search results...', 'step': 'processing'})}\n\n"
+            time.sleep(0.2)
+            
+            yield f"data: {json.dumps({'status': 'Analyzing findings...', 'step': 'analyzing'})}\n\n"
+            time.sleep(0.2)
+            
+            yield f"data: {json.dumps({'status': 'Web search complete!', 'step': 'complete', 'result': search_results})}\n\n"
+            
+        except Exception as e:
+            error_msg = f"Web search error: {str(e)}"
+            print(f"ERROR in stream_web_search: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json.dumps({'error': error_msg})}\n\n"
+    
+    return Response(generate(), mimetype='text/event-stream')
+
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy'})
