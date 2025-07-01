@@ -23,10 +23,12 @@ def translateString(stringToTranslate: str, targetLanguage: str) -> str:
         str: The translated string, or an empty string if translation fails.
     """
     # Initialize the OpenAI client
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    apiKey = os.getenv("OPENAI_API_KEY")
+
+    if not apiKey:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
-    llmClient = OpenAI(api_key=api_key)
+    
+    llmClient = OpenAI(api_key=apiKey)
 
     # Load the translation prompt template from file
     with open("prompts/translateString.txt", "r", encoding="utf-8") as file:
@@ -92,49 +94,57 @@ def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCo
     
     # Call the OpenAI API to get the company description with structured output
     try:
-        response = clientOpenai.chat.completions.create(
+        response = clientOpenai.responses.create(
             model="gpt-4o-mini-2024-07-18",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
+            input=prompt,
+            # max_tokens=500,
             temperature=0.7,
             timeout=30,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "brand_description",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "description": {
-                                "type": "string",
-                                "description": "A 2-4 sentence business description of the company"
-                            }
-                        },
-                        "required": ["description"],
-                        "additionalProperties": False
-                    }
-                }
-            }
+            tools=[{"type": "web_search_preview"}],
+            # response_format={
+            #     "type": "json_schema",
+            #     "json_schema": {
+            #         "name": "brand_description",
+            #         "schema": {
+            #             "type": "object",
+            #             "properties": {
+            #                 "description": {
+            #                     "type": "string",
+            #                     "description": "A 2-4 sentence business description of the company"
+            #                 }
+            #             },
+            #             "required": ["description"],
+            #             "additionalProperties": False
+            #         }
+            #     }
+            # }
         )
+        
         # Extract the description from the structured response
-        result = response.choices[0].message.content
+        messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
+        result = next(iter(messagesTexts.values()), "")
+
         try:
-            parsed_result = json.loads(result)
-            description = parsed_result.get("description", "")
+            parsedResult = json.loads(result)
+            description = parsedResult.get("description", "")
+
             if description and description.strip():
                 return description
+            
             else:
                 # Provide a fallback description
-                fallback_description = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
-                return fallback_description
+                fallbackDescription = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
+                return fallbackDescription
+        
         except json.JSONDecodeError:
             # If structured response fails, try to use the raw content
             if result and result.strip() and result.strip().upper() != "NULL":
                 return result
             else:
                 # Provide a fallback description
-                fallback_description = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
-                return fallback_description
+                fallbackDescription = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
+                return fallbackDescription
+    
     except Exception as e:
         print(f"Error in getBrandDescription: {e}")
         raise Exception(f"Failed to get brand description: {str(e)}")
@@ -181,17 +191,21 @@ def getBrandIndustry(clientOpenai, brandName: str, brandWebsite: str, brandDescr
 
     # Call the OpenAI API to get the company industry
     try:
-        response = clientOpenai.chat.completions.create(
+        response = clientOpenai.responses.create(
             model="gpt-4o-mini-2024-07-18",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
+            input=prompt,
+            # max_tokens=500,
             temperature=0.7,
-            timeout=30
+            timeout=30,
+            tools=[{"type": "web_search_preview"}],
         )
         # Extract the industry from the response
-        result = response.choices[0].message.content
+        messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
+        result = next(iter(messagesTexts.values()), "")
+
         if not result or result.strip() == "":
             raise ValueError("Empty response received from OpenAI API")
+        
         return result
     except Exception as e:
         print(f"Error in getBrandIndustry: {e}")
@@ -241,52 +255,54 @@ def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDe
 
     # Call the OpenAI API to get the competitors with structured output
     try:
-        response = clientOpenai.chat.completions.create(
+        response = clientOpenai.responses.create(
             model="gpt-4o-mini-2024-07-18",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,
+            input=prompt,
+            # max_tokens=1000,
             temperature=0.7,
             timeout=30,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "competitor_analysis",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "competitors": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "name": {
-                                            "type": "string",
-                                            "description": "The competitor's company name"
-                                        },
-                                        "website": {
-                                            "type": "string",
-                                            "description": "The competitor's website URL"
-                                        },
-                                        "reason": {
-                                            "type": "string",
-                                            "description": "Brief explanation of why they compete"
-                                        }
-                                    },
-                                    "required": ["name", "website", "reason"],
-                                    "additionalProperties": False
-                                },
-                                "minItems": 3,
-                                "maxItems": 5
-                            }
-                        },
-                        "required": ["competitors"],
-                        "additionalProperties": False
-                    }
-                }
-            }
+            tools=[{"type": "web_search_preview"}],
+            # response_format={
+            #     "type": "json_schema",
+            #     "json_schema": {
+            #         "name": "competitor_analysis",
+            #         "schema": {
+            #             "type": "object",
+            #             "properties": {
+            #                 "competitors": {
+            #                     "type": "array",
+            #                     "items": {
+            #                         "type": "object",
+            #                         "properties": {
+            #                             "name": {
+            #                                 "type": "string",
+            #                                 "description": "The competitor's company name"
+            #                             },
+            #                             "website": {
+            #                                 "type": "string",
+            #                                 "description": "The competitor's website URL"
+            #                             },
+            #                             "reason": {
+            #                                 "type": "string",
+            #                                 "description": "Brief explanation of why they compete"
+            #                             }
+            #                         },
+            #                         "required": ["name", "website", "reason"],
+            #                         "additionalProperties": False
+            #                     },
+            #                     "minItems": 3,
+            #                     "maxItems": 5
+            #                 }
+            #             },
+            #             "required": ["competitors"],
+            #             "additionalProperties": False
+            #         }
+            #     }
+            # }
         )
         # Extract the competitors from the structured response
-        rawJson = response.choices[0].message.content
+        messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
+        rawJson = next(iter(messagesTexts.values()), "")
         
         if not rawJson or not rawJson.strip():
             print("Warning: Empty response from OpenAI API for competitors")
@@ -333,43 +349,48 @@ def getBrandName(clientOpenai, brandDescription: str) -> str:
 
     # Call the OpenAI API to get the company name with structured output
     try:
-        response = clientOpenai.chat.completions.create(
+        response = clientOpenai.responses.create(
             model="gpt-4o-mini-2024-07-18",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
+            input=prompt,
+            # max_tokens=500,
             temperature=0.7,
             timeout=30,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "brand_name",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "name": {
-                                "type": "string",
-                                "description": "The extracted or identified company name"
-                            }
-                        },
-                        "required": ["name"],
-                        "additionalProperties": False
-                    }
-                }
-            }
+            tools=[{"type": "web_search_preview"}],
+            # response_format={
+            #     "type": "json_schema",
+            #     "json_schema": {
+            #         "name": "brand_name",
+            #         "schema": {
+            #             "type": "object",
+            #             "properties": {
+            #                 "name": {
+            #                     "type": "string",
+            #                     "description": "The extracted or identified company name"
+            #                 }
+            #             },
+            #             "required": ["name"],
+            #             "additionalProperties": False
+            #         }
+            #     }
+            # }
         )
         # Extract the name from the structured response
-        result = response.choices[0].message.content
+        messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
+        result = next(iter(messagesTexts.values()), "")
+        
         try:
-            parsed_result = json.loads(result)
-            name = parsed_result.get("name", "")
+            parsedResult = json.loads(result)
+            name = parsedResult.get("name", "")
             if name and name.strip():
                 return name
             else:
                 # Extract a reasonable name from the description or use a fallback
                 words = brandDescription.split()
+
                 for word in words:
                     if word[0].isupper() and len(word) > 2 and not word.lower() in ['the', 'and', 'for', 'with', 'this', 'that']:
                         return word
+                
                 # If no suitable name found, return a generic business name
                 return "Business Entity"
         except json.JSONDecodeError:
