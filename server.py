@@ -8,7 +8,8 @@ load_dotenv(override=True)
 # Also try loading from explicit path
 load_dotenv(dotenv_path='.env', override=True)
 
-from flask import Flask, request, jsonify, render_template, Response
+from flask import Flask, request, jsonify, Response
+from flask_cors import CORS
 import json
 import time
 import libs.utils as utils
@@ -17,6 +18,7 @@ import libs.geo_analysis as geo_analysis
 import libs.search_analysis as search_analysis
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Print environment variables for debugging
 print("=== Environment Variables ===")
@@ -29,7 +31,37 @@ print("=============================")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return jsonify({
+        'message': 'Evidentia API Server',
+        'status': 'running',
+        'version': '1.0.0',
+        'endpoints': [
+            '/collect-email',
+            '/stream-brand-info',
+            '/stream-generate-queries', 
+            '/stream-test-queries',
+            '/get-llm-models',
+            '/health'
+        ]
+    })
+
+@app.route('/collect-email', methods=['POST'])
+def collect_email():
+    try:
+        data = request.json
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        # Here you can store the email to a database or file
+        # For now, we'll just log it
+        print(f"Collected email: {email}")
+        
+        return jsonify({'success': True, 'message': 'Email collected successfully'})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/brand-info', methods=['POST'])
 def get_brand_info():
