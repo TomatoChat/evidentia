@@ -117,3 +117,39 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
     except Exception as e:
         logging.error(f"Query generation failed: {e}")
         raise ValueError(f"Failed to generate queries: {e}")
+    
+
+def runBulkQueries(queries:list[dict], llmModel:str="gpt-4o-mini-2024-07-18"):
+    """
+    Runs a bulk of queries using an LLM (OpenAI) with web search capabilities.
+
+    Args:
+        queries (list[dict]): A list of dictionaries containing the queries to run.
+        llmModel (str, optional): The model to use for the queries. Defaults to "gpt-4o-mini-2024-07-18".
+    """
+
+    apiKey = os.getenv("OPENAI_API_KEY")
+
+    if not apiKey:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    
+    llmClient = OpenAI(api_key=apiKey)
+    results = []
+    
+    for query in queries:
+        response = llmClient.responses.create(
+            model=llmModel,
+            tools=[{"type": "web_search_preview"}],
+            input=query["prompt"],
+        )
+        
+        messagesAnnotations, messagesTexts = getResponseInfo(response)
+        rawJson = next(iter(messagesTexts.values()), "")
+
+        results.append({
+            "query": query,
+            "messageAnnotations": messagesAnnotations,
+            "messageTexts": messagesTexts
+        })
+        
+    return results
