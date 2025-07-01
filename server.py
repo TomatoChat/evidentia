@@ -13,8 +13,8 @@ import json
 import time
 import libs.utils as utils
 import libs.openai as openaiAnalytics
-import libs.geo_analysis as geo_analysis
-import libs.search_analysis as search_analysis
+import libs.geoAnalysis as geoAnalysis
+import libs.webSearch as webSearch
 
 app = Flask(__name__)
 
@@ -89,7 +89,7 @@ def test_queries():
             else:
                 query_strings.append(str(q))
         
-        analysis = search_analysis.analyze_brand_presence(
+        analysis = webSearch.analyze_brand_presence(
             brand_name, competitors, query_strings, locations
         )
         return jsonify(analysis)
@@ -115,7 +115,7 @@ def get_llm_suggestions():
         if not brand_name:
             return jsonify({'error': 'brandName is required'}), 400
         
-        suggestions = geo_analysis.generate_llm_test_queries(brand_name, industry)
+        suggestions = geoAnalysis.generate_llm_test_queries(brand_name, industry)
         return jsonify({'suggestions': suggestions})
     
     except Exception as e:
@@ -231,7 +231,7 @@ def stream_test_queries():
             yield f"data: {json.dumps({'status': f'Starting GEO analysis for {len(query_strings)} queries across {len(llm_models)} LLM models...', 'step': 'init', 'progress': 0})}\n\n"
             
             # Use the regular (non-streaming) geo_analysis function for now
-            analysis_results = geo_analysis.analyze_llm_brand_positioning(
+            analysis_results = geoAnalysis.analyze_llm_brand_positioning(
                 brand_name=brand_name,
                 competitors=competitors,
                 queries=query_strings,
@@ -242,7 +242,7 @@ def stream_test_queries():
             
             # Generate optimization suggestions
             yield f"data: {json.dumps({'status': 'Generating optimization suggestions...', 'step': 'suggestions', 'progress': 95})}\n\n"
-            suggestions = geo_analysis.get_geo_optimization_suggestions(analysis_results)
+            suggestions = geoAnalysis.get_geo_optimization_suggestions(analysis_results)
             analysis_results["optimization_suggestions"] = suggestions
             
             yield f"data: {json.dumps({'status': 'GEO Analysis complete!', 'step': 'complete', 'progress': 100, 'result': analysis_results})}\n\n"

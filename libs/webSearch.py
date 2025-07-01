@@ -9,6 +9,7 @@ from urllib.parse import quote_plus, urljoin
 import re
 from serpapi.client import SerpAPI
 
+
 def real_google_search(query: str, location: str = "United States", num_results: int = 10) -> List[Dict[str, Any]]:
     """
     Perform real Google search using SerpAPI.
@@ -84,6 +85,7 @@ def real_google_search(query: str, location: str = "United States", num_results:
         # Fall back to simulation
         return simulate_google_search(query, location, num_results)
 
+
 def simulate_google_search(query: str, location: str = "United States", num_results: int = 10) -> List[Dict[str, Any]]:
     """
     Simulate a Google search using web scraping (for demonstration purposes).
@@ -144,6 +146,7 @@ def simulate_google_search(query: str, location: str = "United States", num_resu
         result["query"] = query
     
     return sample_results[:num_results]
+
 
 def analyze_brand_presence(brand_name: str, competitors: List[str], queries: List[str], locations: List[str]) -> Dict[str, Any]:
     """
@@ -272,6 +275,7 @@ def analyze_brand_presence(brand_name: str, competitors: List[str], queries: Lis
     
     return analysis_results
 
+
 def get_search_suggestions(brand_name: str, industry: str) -> List[str]:
     """
     Generate search query suggestions for brand analysis.
@@ -297,6 +301,7 @@ def get_search_suggestions(brand_name: str, industry: str) -> List[str]:
     ]
     
     return base_queries
+
 
 def generate_geo_locations() -> List[str]:
     """
