@@ -97,27 +97,9 @@ def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCo
         response = clientOpenai.responses.create(
             model="gpt-4o-mini-2024-07-18",
             input=prompt,
-            # max_tokens=500,
             temperature=0.7,
             timeout=30,
             tools=[{"type": "web_search_preview"}],
-            # response_format={
-            #     "type": "json_schema",
-            #     "json_schema": {
-            #         "name": "brand_description",
-            #         "schema": {
-            #             "type": "object",
-            #             "properties": {
-            #                 "description": {
-            #                     "type": "string",
-            #                     "description": "A 2-4 sentence business description of the company"
-            #                 }
-            #             },
-            #             "required": ["description"],
-            #             "additionalProperties": False
-            #         }
-            #     }
-            # }
         )
         
         # Extract the description from the structured response
@@ -258,65 +240,27 @@ def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDe
         response = clientOpenai.responses.create(
             model="gpt-4o-mini-2024-07-18",
             input=prompt,
-            # max_tokens=1000,
             temperature=0.7,
             timeout=30,
             tools=[{"type": "web_search_preview"}],
-            # response_format={
-            #     "type": "json_schema",
-            #     "json_schema": {
-            #         "name": "competitor_analysis",
-            #         "schema": {
-            #             "type": "object",
-            #             "properties": {
-            #                 "competitors": {
-            #                     "type": "array",
-            #                     "items": {
-            #                         "type": "object",
-            #                         "properties": {
-            #                             "name": {
-            #                                 "type": "string",
-            #                                 "description": "The competitor's company name"
-            #                             },
-            #                             "website": {
-            #                                 "type": "string",
-            #                                 "description": "The competitor's website URL"
-            #                             },
-            #                             "reason": {
-            #                                 "type": "string",
-            #                                 "description": "Brief explanation of why they compete"
-            #                             }
-            #                         },
-            #                         "required": ["name", "website", "reason"],
-            #                         "additionalProperties": False
-            #                     },
-            #                     "minItems": 3,
-            #                     "maxItems": 5
-            #                 }
-            #             },
-            #             "required": ["competitors"],
-            #             "additionalProperties": False
-            #         }
-            #     }
-            # }
         )
-        # Extract the competitors from the structured response
+        
+        # Extract the competitors from the response
         messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
         rawJson = next(iter(messagesTexts.values()), "")
-        
-        if not rawJson or not rawJson.strip():
-            print("Warning: Empty response from OpenAI API for competitors")
-            return {"competitors": []}
 
-        # Parse the structured JSON response
-        try:
-            result = json.loads(rawJson)
-            return result
-        except json.JSONDecodeError as json_error:
-            print(f"JSON decode error with structured output: {json_error}")
-            print(f"Raw response: {rawJson}")
-            # Return a fallback structure if parsing fails
-            return {"competitors": []}
+        # Remove code block markers if present
+        if rawJson.startswith("```json"):
+            rawJson = rawJson[len("```json"):].strip()
+        
+        if rawJson.endswith("```"):
+            rawJson = rawJson[:-3].strip()
+
+        if not rawJson.strip():
+            raise ValueError("No JSON output received from OpenAI API.")
+
+        # Parse and return the JSON as a Python dictionary
+        return json.loads(rawJson)
             
     except Exception as e:
         print(f"Error in getBrandCompetitors: {e}")
@@ -352,27 +296,9 @@ def getBrandName(clientOpenai, brandDescription: str) -> str:
         response = clientOpenai.responses.create(
             model="gpt-4o-mini-2024-07-18",
             input=prompt,
-            # max_tokens=500,
             temperature=0.7,
             timeout=30,
             tools=[{"type": "web_search_preview"}],
-            # response_format={
-            #     "type": "json_schema",
-            #     "json_schema": {
-            #         "name": "brand_name",
-            #         "schema": {
-            #             "type": "object",
-            #             "properties": {
-            #                 "name": {
-            #                     "type": "string",
-            #                     "description": "The extracted or identified company name"
-            #                 }
-            #             },
-            #             "required": ["name"],
-            #             "additionalProperties": False
-            #         }
-            #     }
-            # }
         )
         # Extract the name from the structured response
         messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
