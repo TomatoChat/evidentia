@@ -1,245 +1,138 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import clsx from 'clsx'
+import React, { useState, useRef, useEffect } from "react";
 
-interface NavButton {
-  className?: string
-  children: React.ReactNode
-  variant?: 'default' | 'outline'
-  onClick?: () => void
-}
+const AnimatedNavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
+  const defaultTextColor = 'text-gray-300';
+  const hoverTextColor = 'text-white';
+  const textSizeClass = 'text-sm';
 
-const Button: React.FC<NavButton> = ({ 
-  className, 
-  children, 
-  variant = 'default',
-  onClick 
-}) => {
   return (
-    <button
-      onClick={onClick}
-      className={clsx(
-        'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-        'disabled:pointer-events-none disabled:opacity-50',
-        'h-10 px-4 py-2',
-        variant === 'default' && [
-          'bg-black text-white hover:bg-black/90',
-          'dark:bg-white dark:text-black dark:hover:bg-white/90'
-        ],
-        variant === 'outline' && [
-          'border border-current',
-          'hover:bg-black/10 dark:hover:bg-white/10'
-        ],
-        className
-      )}
-    >
-      {children}
-    </button>
-  )
-}
+    <a href={href} className={`group relative inline-flex items-center overflow-hidden ${textSizeClass}`}>
+      <div className="flex flex-col transition-transform duration-400 ease-out transform group-hover:-translate-y-1/2">
+        <span className={defaultTextColor}>{children}</span>
+        <span className={hoverTextColor}>{children}</span>
+      </div>
+    </a>
+  );
+};
 
-interface NavItem {
-  to?: string
-  text: string
-  items?: {
-    icon?: {
-      dark: string
-      light: string
+export function MiniNavbar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [headerShapeClass, setHeaderShapeClass] = useState('rounded-full');
+  const shapeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  useEffect(() => {
+    if (shapeTimeoutRef.current) {
+      clearTimeout(shapeTimeoutRef.current);
     }
-    text: string
-    description?: string
-    to: string
-  }[]
-}
 
-interface HeaderProps {
-  className?: string
-  theme?: 'light' | 'dark'
-  isSticky?: boolean
-  isStickyOverlay?: boolean
-  withBorder?: boolean
-  logo?: React.ReactNode
-  menuItems?: NavItem[]
-  onThemeChange?: () => void
-  rightContent?: React.ReactNode
-}
+    if (isOpen) {
+      setHeaderShapeClass('rounded-xl');
+    } else {
+      shapeTimeoutRef.current = setTimeout(() => {
+        setHeaderShapeClass('rounded-full');
+      }, 300);
+    }
 
-const ChevronIcon = () => (
-  <svg
-    width="10"
-    height="6"
-    viewBox="0 0 10 6"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-2.5 opacity-60 [&_path]:stroke-2"
-  >
-    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-)
+    return () => {
+      if (shapeTimeoutRef.current) {
+        clearTimeout(shapeTimeoutRef.current);
+      }
+    };
+  }, [isOpen]);
 
-const Navigation: React.FC<{ isDarkTheme?: boolean; items: NavItem[] }> = ({ isDarkTheme, items }) => (
-  <nav>
-    <ul className="flex gap-x-10 xl:gap-x-8 lg:hidden [@media(max-width:1070px)]:gap-x-6">
-      {items.map(({ to, text, items }, index) => {
-        const Tag = to ? 'a' : 'button'
-        return (
-          <li
-            className={clsx('relative [perspective:2000px]', items?.length > 0 && 'group')}
-            key={index}
-          >
-            <Tag
-              className={clsx(
-                'flex items-center gap-x-1 whitespace-pre text-sm',
-                isDarkTheme ? 'text-white' : 'text-black dark:text-white'
-              )}
-              href={to}
-            >
-              {text}
-              {items?.length > 0 && <ChevronIcon />}
-            </Tag>
-            {items?.length > 0 && (
-              <div
-                className={clsx(
-                  'absolute -left-5 top-full w-[300px] pt-5',
-                  'pointer-events-none opacity-0',
-                  'origin-top-left transition-[opacity,transform] duration-200 [transform:rotateX(-12deg)_scale(0.9)]',
-                  'group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-hover:[transform:none]'
-                )}
-              >
-                <ul
-                  className={clsx(
-                    'relative flex min-w-[248px] flex-col gap-y-0.5 rounded-[14px] border p-2.5',
-                    'dark:border-[#16181D] dark:bg-[#0B0C0F] dark:shadow-[0px_14px_20px_0px_rgba(0,0,0,.5)]',
-                    isDarkTheme
-                      ? 'border-[#16181D] bg-[#0B0C0F] shadow-[0px_14px_20px_0px_rgba(0,0,0,.5)]'
-                      : 'border-gray-200 bg-white shadow-[0px_14px_20px_0px_rgba(0,0,0,.1)]'
-                  )}
-                >
-                  {items.map(({ icon, text, description, to }, index) => (
-                    <li key={index}>
-                      <a
-                        className={clsx(
-                          'group/link relative flex items-center overflow-hidden whitespace-nowrap rounded-[14px] p-2',
-                          'before:absolute before:inset-0 before:z-10 before:opacity-0 before:transition-opacity before:duration-200 hover:before:opacity-100',
-                          isDarkTheme
-                            ? 'text-white before:bg-[#16181D]'
-                            : 'text-black before:bg-[#f5f5f5]'
-                        )}
-                        href={to}
-                      >
-                        {icon && (
-                          <div
-                            className={clsx(
-                              'relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border',
-                              isDarkTheme
-                                ? 'border-[#2E3038] bg-[#16181D]'
-                                : 'border-gray-200 bg-[#F5F5F5]'
-                            )}
-                          >
-                            <img
-                              className="h-5 w-5"
-                              src={isDarkTheme ? icon.dark : icon.light}
-                              width={20}
-                              height={20}
-                              loading="lazy"
-                              alt=""
-                              aria-hidden
-                            />
-                          </div>
-                        )}
-                        <div className="relative z-10 ml-3">
-                          <span className="block text-sm font-medium">{text}</span>
-                          {description && (
-                            <span
-                              className={clsx(
-                                'mt-0.5 block text-sm',
-                                isDarkTheme ? 'text-gray-400' : 'text-gray-500'
-                              )}
-                            >
-                              {description}
-                            </span>
-                          )}
-                        </div>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </li>
-        )
-      })}
-    </ul>
-  </nav>
-)
+  const logoElement = (
+    <div className="relative w-5 h-5 flex items-center justify-center">
+      <span className="absolute w-1.5 h-1.5 rounded-full bg-gray-200 top-0 left-1/2 transform -translate-x-1/2 opacity-80"></span>
+      <span className="absolute w-1.5 h-1.5 rounded-full bg-gray-200 left-0 top-1/2 transform -translate-y-1/2 opacity-80"></span>
+      <span className="absolute w-1.5 h-1.5 rounded-full bg-gray-200 right-0 top-1/2 transform -translate-y-1/2 opacity-80"></span>
+      <span className="absolute w-1.5 h-1.5 rounded-full bg-gray-200 bottom-0 left-1/2 transform -translate-x-1/2 opacity-80"></span>
+    </div>
+  );
 
-const MobileMenuButton: React.FC<{ onClick: () => void; isDarkTheme?: boolean }> = ({
-  onClick,
-  isDarkTheme,
-}) => (
-  <button
-    className={clsx(
-      'hidden lg:block',
-      'relative h-8 w-8',
-      isDarkTheme ? 'text-white' : 'text-black dark:text-white'
-    )}
-    onClick={onClick}
-  >
-    <span className="absolute left-1/2 top-1/2 block h-0.5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current" />
-    <span className="absolute left-1/2 top-1/2 block h-0.5 w-5 -translate-x-1/2 translate-y-1 rounded-full bg-current" />
-  </button>
-)
+  const navLinksData = [
+    { label: 'Manifesto', href: '#1' },
+    { label: 'Careers', href: '#2' },
+    { label: 'Discover', href: '#3' },
+  ];
 
-export const Header: React.FC<HeaderProps> = ({
-  className,
-  theme = 'light',
-  isSticky = false,
-  isStickyOverlay = false,
-  withBorder = false,
-  logo,
-  menuItems = [],
-  onThemeChange,
-  rightContent,
-}) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
-  const isDarkTheme = theme === 'dark'
+  const loginButtonElement = (
+    <button className="px-4 py-2 sm:px-3 text-xs sm:text-sm border border-[#333] bg-[rgba(31,31,31,0.62)] text-gray-300 rounded-full hover:border-white/50 hover:text-white transition-colors duration-200 w-full sm:w-auto">
+      LogIn
+    </button>
+  );
+
+  const signupButtonElement = (
+    <div className="relative group w-full sm:w-auto">
+      <div className="absolute inset-0 -m-2 rounded-full
+                     hidden sm:block
+                     bg-gray-100
+                     opacity-40 filter blur-lg pointer-events-none
+                     transition-all duration-300 ease-out
+                     group-hover:opacity-60 group-hover:blur-xl group-hover:-m-3"></div>
+      <button className="relative z-10 px-4 py-2 sm:px-3 text-xs sm:text-sm font-semibold text-black bg-gradient-to-br from-gray-100 to-gray-300 rounded-full hover:from-gray-200 hover:to-gray-400 transition-all duration-200 w-full sm:w-auto">
+        Signup
+      </button>
+    </div>
+  );
 
   return (
-    <header
-      className={clsx(
-        'relative z-40 w-full',
-        isSticky && 'sticky top-0',
-        isStickyOverlay && 'bg-white/80 backdrop-blur-md dark:bg-[#0B0C0F]/80',
-        withBorder && 'border-b border-gray-200 dark:border-[#16181D]',
-        className
-      )}
-    >
-      <div className="mx-auto max-w-[1760px] px-5 py-4">
-        <div className="flex items-center justify-between">
-          {logo}
-          <Navigation isDarkTheme={isDarkTheme} items={menuItems} />
-          <div className="flex items-center gap-x-6">
-            {rightContent}
-            {onThemeChange && (
-              <Button
-                variant="default"
-                onClick={onThemeChange}
-              >
-                {isDarkTheme ? '🌞' : '🌙'}
-              </Button>
-            )}
-            <MobileMenuButton
-              isDarkTheme={isDarkTheme}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            />
-          </div>
+    <header className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-20
+                       flex flex-col items-center
+                       pl-6 pr-6 py-3 backdrop-blur-sm
+                       ${headerShapeClass}
+                       border border-[#333] bg-[#1f1f1f57]
+                       w-[calc(100%-2rem)] sm:w-auto
+                       transition-[border-radius] duration-0 ease-in-out`}>
+
+      <div className="flex items-center justify-between w-full gap-x-6 sm:gap-x-8">
+        <div className="flex items-center">
+          {logoElement}
+        </div>
+
+        <nav className="hidden sm:flex items-center space-x-4 sm:space-x-6 text-sm">
+          {navLinksData.map((link) => (
+            <AnimatedNavLink key={link.href} href={link.href}>
+              {link.label}
+            </AnimatedNavLink>
+          ))}
+        </nav>
+
+        <div className="hidden sm:flex items-center gap-2 sm:gap-3">
+          {loginButtonElement}
+          {signupButtonElement}
+        </div>
+
+        <button className="sm:hidden flex items-center justify-center w-8 h-8 text-gray-300 focus:outline-none" onClick={toggleMenu} aria-label={isOpen ? 'Close Menu' : 'Open Menu'}>
+          {isOpen ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          )}
+        </button>
+      </div>
+
+      <div className={`sm:hidden flex flex-col items-center w-full transition-all ease-in-out duration-300 overflow-hidden
+                       ${isOpen ? 'max-h-[1000px] opacity-100 pt-4' : 'max-h-0 opacity-0 pt-0 pointer-events-none'}`}>
+        <nav className="flex flex-col items-center space-y-4 text-base w-full">
+          {navLinksData.map((link) => (
+            <a key={link.href} href={link.href} className="text-gray-300 hover:text-white transition-colors w-full text-center">
+              {link.label}
+            </a>
+          ))}
+        </nav>
+        <div className="flex flex-col items-center space-y-4 mt-4 w-full">
+          {loginButtonElement}
+          {signupButtonElement}
         </div>
       </div>
     </header>
-  )
+  );
 }
 
-export { Button }
-export default Header
+export default MiniNavbar;
