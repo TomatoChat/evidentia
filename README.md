@@ -10,22 +10,14 @@
 
 ### Core Analysis Capabilities
 - **🧠 Advanced LLM Brand Analysis**: Comprehensive analysis of how your brand appears across multiple AI models
-- **📊 Multi-Model GEO Testing**: Test brand positioning across GPT-4, GPT-3.5, and other LLM models simultaneously
-- **💭 Intelligent Query Generation**: AI-powered generation of test queries tailored to your industry and brand
+- **📊 Multi-Model GEO Testing**: Test brand positioning across GPT-4, Gemini, Google Overview, Perplexity and other LLM models simultaneously
 - **🎯 Sentiment & Positioning Analysis**: Deep understanding of how AI portrays your brand (positive/neutral/negative)
 - **🥊 Competitive Intelligence**: Advanced competitor analysis and positioning comparison
 - **📈 Performance Metrics**: Comprehensive metrics including mention rates, positioning scores, and visibility analytics
-- **🔍 Real-Time Web Search**: OpenAI Responses API integration with web search capabilities for current market intelligence
-
-### Real-Time Experience
-- **⚡ Real-time Streaming Analysis**: Watch analysis progress with live updates and detailed logs
-- **📱 Interactive Web Interface**: Modern, responsive UI with progress tracking and detailed visualizations
-- **🔄 Streaming Progress Updates**: Real-time status updates with color-coded progress indicators
-- **📋 Detailed Analysis Reports**: Comprehensive reports with actionable insights
 
 ### Advanced Capabilities
-- **🎯 Smart Optimization Suggestions**: AI-generated recommendations for improving GEO performance
 - **🌍 Geographic Market Analysis**: Country-specific brand analysis and market positioning
+- **🎯 Smart Optimization Suggestions**: AI-generated recommendations for improving GEO performance
 - **🔍 Query Performance Insights**: Detailed analysis of individual query performance
 - **📊 Brand Visibility Scoring**: Proprietary scoring system for brand visibility in AI responses
 - **🤖 Multi-LLM Testing Framework**: Support for testing across different AI models and providers
@@ -63,9 +55,6 @@
    ```
    OPENAI_API_KEY=your_openai_api_key_here
    PROJECT_DIRECTORY=/path/to/your/evidentia/directory
-   
-   # Optional - for real Google search results (100 free searches/month)
-   SERPAPI_KEY=your_serpapi_key_here
    ```
 
 ## 🎯 Usage
@@ -84,20 +73,15 @@
 3. **Complete GEO Analysis Workflow**
 
    **Step 1: Brand Discovery & Analysis**
-   - Enter brand name (e.g., "jethr")
+   - Enter brand name (e.g., "JetHR")
    - Enter brand website (e.g., "jethr.com")
    - Optionally specify country (defaults to "world")
    - Click "🚀 Analyze Brand" to get comprehensive company information
    - Watch real-time progress with streaming updates
 
-   **Step 2: Intelligent Query Generation**
-   - Adjust the number of test queries (1-100)
-   - Click "📝 Generate Queries" to create AI-optimized test queries
-   - Review generated queries tailored to your industry and brand positioning
-
-   **Step 3: Advanced GEO Testing & Rankings**
-   - Select LLM models to test (GPT-4, GPT-3.5, etc.)
-   - Click "🌍 Test Queries & Rankings" to start comprehensive GEO analysis
+   **Step 2: Advanced GEO Testing & Rankings**
+   - Select LLM models to test (GPT-4, Google Gemini, Perplexity, etc.)
+   - Click "🌍 Get GEO Ranking" to start comprehensive GEO analysis
    - Monitor real-time analysis progress with detailed streaming logs
    - Review comprehensive results including:
      - Brand mention rates across different AI models
@@ -120,7 +104,7 @@ POST /stream-brand-info
 Content-Type: application/json
 
 {
-  "brandName": "jethr",
+  "brandName": "JetHR",
   "brandWebsite": "jethr.com",
   "brandCountry": "italy"
 }
@@ -197,51 +181,6 @@ Content-Type: application/json
 ```
 Returns real-time streaming web search with progress updates.
 
-#### Legacy Endpoints (Non-Streaming)
-```bash
-POST /brand-info          # Basic brand information
-POST /generate-queries    # Generate test queries
-POST /test-queries       # Basic GEO analysis
-GET /health             # Health check
-```
-
-### 🔍 Web Search Integration
-
-The platform now includes advanced web search capabilities powered by OpenAI's Responses API:
-
-- **Real-time web search** with current market data
-- **Structured analysis** of search results with insights and sources
-- **Quality assessment** of search information (high/medium/low)
-- **Source attribution** with URLs and relevant excerpts
-- **Streaming progress** updates during search operations
-
-### Jupyter Notebook
-
-You can also use the functionality directly in Jupyter notebooks:
-
-```python
-import libs.utils as utils
-import libs.openai as openaiAnalytics
-
-# Get brand information
-brand_info = utils.getCompanyInfo("jethr", "jethr.com", "italy")
-
-# Generate queries
-queries = openaiAnalytics.getCoherentQueries(
-    brand_info['name'], 
-    "italy", 
-    brand_info['description'], 
-    brand_info['industry'], 
-    10
-)
-
-# Perform web search and analysis
-search_results = openaiAnalytics.webSearchAndAnalyze(
-    "latest AI automation trends 2024",
-    "market research for technology companies"
-)
-```
-
 ## 📁 Project Structure
 
 ```
@@ -249,27 +188,28 @@ evidentia/
 ├── libs/                   # Core analysis libraries
 │   ├── geo_analysis.py     # 🌍 GEO analysis engine with streaming support
 │   ├── search_analysis.py  # 🔍 Search analysis and ranking functions
-│   ├── openai.py          # 🤖 OpenAI Responses API integration with web search
-│   └── utils.py           # 🛠️ Brand analysis and utility functions
-├── prompts/               # 📝 AI prompt templates
-│   ├── brandDescription.txt    # Prompt for brand description extraction
-│   ├── brandIndustry.txt      # Prompt for industry classification
-│   ├── brandCompetitors.txt   # Prompt for competitor identification
-│   ├── brandName.txt          # Prompt for brand name extraction
+│   ├── openai.py           # 🤖 OpenAI Responses API integration with web search
+│   └── utils.py            # 🛠️ Brand analysis and utility functions
+├── prompts/                # 📝 AI prompt templates
+│   ├── brandDescription.txt        # Prompt for brand description extraction
+│   ├── brandIndustry.txt           # Prompt for industry classification
+│   ├── brandCompetitors.txt        # Prompt for competitor identification
+│   ├── brandName.txt               # Prompt for brand name extraction
 │   ├── brandPromptsGeneration.txt  # Prompt for query generation
-│   └── translateString.txt    # Prompt for translation services
-├── templates/             # 🎨 Web interface templates
-│   └── index.html         # Interactive web interface with streaming support
-├── utils/                 # 📊 Configuration and mapping files
-│   └── countryLanguage.json   # Country-language mappings for localization
-├── notebooks/             # 📓 Analysis notebooks
-│   └── openAI.ipynb       # Example Jupyter notebook with GEO analysis
-├── server.py              # 🖥️ Flask web server with streaming endpoints
-├── requirements.txt       # 📦 Python dependencies
-├── CLAUDE.md             # 🤖 AI development guidelines
-├── LICENSE               # ⚖️ License information
-├── .env.example          # 🔧 Environment variables template
-└── README.md             # 📚 This documentation
+│   ├── translateString.txt         # Prompt for translation services
+│   └── extractBrandsAndInfo.txt    # Prompt for extracting brands and info
+├── templates/              # 🎨 Web interface templates
+│   └── index.html          # Interactive web interface with streaming support
+├── utils/                  # 📊 Configuration and mapping files
+│   └── countryLanguage.json        # Country-language mappings for localization
+├── notebooks/              # 📓 Analysis notebooks
+│   └── openAI.ipynb        # Example Jupyter notebook with GEO analysis
+├── server.py               # 🖥️ Flask web server with streaming endpoints
+├── requirements.txt        # 📦 Python dependencies
+├── CLAUDE.md               # 🤖 AI development guidelines
+├── LICENSE                 # ⚖️ License information
+├── .env.example            # 🔧 Environment variables template
+└── README.md               # 📚 This documentation
 ```
 
 ## Configuration
@@ -285,16 +225,6 @@ The application uses the following environment variables:
 **GEO (Generative Engine Optimization)** focuses on optimizing for AI assistant responses (ChatGPT, Claude, etc.)
 
 This tool helps you understand and improve your **GEO performance** - how your brand appears when users ask AI assistants for recommendations, comparisons, or information.
-
-## 📦 Dependencies
-
-- `openai>=1.0.0` - OpenAI API client for LLM interactions
-- `langchain>=0.1.0` - LangChain framework for prompt templates and AI workflows
-- `python-dotenv>=1.0.0` - Environment variable management and configuration
-- `flask>=2.0.0` - Web framework with streaming support
-- `requests>=2.25.0` - HTTP client for external API integrations
-- `beautifulsoup4>=4.9.0` - HTML parsing for web scraping capabilities
-- `pocketflow` - Workflow management for complex analysis pipelines
 
 ## 🎯 What Makes Evidentia Unique
 
