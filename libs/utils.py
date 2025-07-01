@@ -1,28 +1,31 @@
 import sys
 import os
-
+import json
+from typing import Any, Dict, List
 from langchain.prompts import PromptTemplate
 from openai import OpenAI
 import libs.openai as openaiAnalytics
-import json
+import re
 
 
 with open('utils/countryLanguage.json', 'r', encoding='utf-8') as file:
     countryLanguages = json.load(file)
 
+openAiDefaultModel: str = "gpt-4o-mini-2024-07-18"
 
-def translateString(stringToTranslate: str, targetLanguage: str) -> str:
+
+def translateString(stringToTranslate: str, targetLanguage: str, openAiModel: str = openAiDefaultModel) -> str:
     """
     Translates a given string into the specified target language using an LLM (OpenAI) and a prompt template.
-
+    
     Args:
         stringToTranslate (str): The text string to be translated.
         targetLanguage (str): The language to translate the string into.
-
+        openAiModel (str, optional): The OpenAI model to use. Defaults to openAiDefaultModel.
+    
     Returns:
         str: The translated string, or an empty string if translation fails.
     """
-    # Initialize the OpenAI client
     apiKey = os.getenv("OPENAI_API_KEY")
 
     if not apiKey:
@@ -30,11 +33,9 @@ def translateString(stringToTranslate: str, targetLanguage: str) -> str:
     
     llmClient = OpenAI(api_key=apiKey)
 
-    # Load the translation prompt template from file
     with open("prompts/translateString.txt", "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
-    # Format the prompt with the string to translate and the target language
     prompt = PromptTemplate(
         input_variables=["stringToTranslate", "targetLanguage"],
         template=promptTemplate
@@ -42,37 +43,32 @@ def translateString(stringToTranslate: str, targetLanguage: str) -> str:
         stringToTranslate=stringToTranslate,
         targetLanguage=targetLanguage
     )
-
-    # Call the OpenAI API to get the translation
     response = llmClient.chat.completions.create(
-        model="gpt-4o-mini-2024-07-18",
+        model=openAiModel,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=500,
         temperature=0.7
     )
-    
-    # Extract the translated text from the response
+
     return response.choices[0].message.content
 
 
-def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCountry: str = "world") -> str:
+def getBrandDescription(clientOpenai: Any, brandName: str, brandWebsite: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel) -> str:
     """
     Retrieves the company description using OpenAI's responses API and the brandDescription prompt template.
-
+    
     Args:
-        clientOpenai: An initialized OpenAI client instance.
+        clientOpenai (Any): An initialized OpenAI client instance.
         brandName (str): The name of the brand/company.
         brandWebsite (str): The website of the brand/company.
         brandCountry (str, optional): The country of the brand/company. Defaults to "world".
-
+        openAiModel (str, optional): The OpenAI model to use. Defaults to openAiDefaultModel.
+    
     Returns:
         str: The company description, translated if necessary.
     """
-    # Load the brand description prompt template from file
     with open("prompts/brandDescription.txt", "r", encoding="utf-8") as file:
         promptTemplate = file.read()
-
-    # Format the prompt with the provided brand information
+    
     prompt = PromptTemplate(
         input_variables=["companyName", "companyWebsite", "companyCountry"],
         template=promptTemplate
@@ -81,28 +77,22 @@ def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCo
         companyWebsite=brandWebsite,
         companyCountry=brandCountry
     )
-
-    # Determine the target language for the description
     targetLanguage = countryLanguages.get(brandCountry.lower(), 'english').lower()
 
-    # If the target language is not English, translate the prompt
     if targetLanguage != 'english':
         translatedPrompt = translateString(prompt, targetLanguage)
 
         if 'NULL' not in translatedPrompt:
             prompt = translatedPrompt
-    
-    # Call the OpenAI API to get the company description with structured output
+
     try:
         response = clientOpenai.responses.create(
-            model="gpt-4o-mini-2024-07-18",
+            model=openAiModel,
             input=prompt,
             temperature=0.7,
             timeout=30,
             tools=[{"type": "web_search_preview"}],
         )
-        
-        # Extract the description from the structured response
         messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
         result = next(iter(messagesTexts.values()), "")
 
@@ -112,45 +102,38 @@ def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCo
 
             if description and description.strip():
                 return description
-            
             else:
-                # Provide a fallback description
                 fallbackDescription = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
                 return fallbackDescription
-        
         except json.JSONDecodeError:
-            # If structured response fails, try to use the raw content
             if result and result.strip() and result.strip().upper() != "NULL":
                 return result
             else:
-                # Provide a fallback description
                 fallbackDescription = f"{brandName} is a business operating in {brandCountry} with their website at {brandWebsite}. The company provides digital services and solutions to their customers in the local market."
                 return fallbackDescription
-    
     except Exception as e:
         print(f"Error in getBrandDescription: {e}")
         raise Exception(f"Failed to get brand description: {str(e)}")
 
 
-def getBrandIndustry(clientOpenai, brandName: str, brandWebsite: str, brandDescription: str, brandCountry: str = "world") -> str:
+def getBrandIndustry(clientOpenai: Any, brandName: str, brandWebsite: str, brandDescription: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel) -> str:
     """
     Retrieves the company industry using OpenAI's responses API and the brandIndustry prompt template.
-
+    
     Args:
-        clientOpenai: An initialized OpenAI client instance.
+        clientOpenai (Any): An initialized OpenAI client instance.
         brandName (str): The name of the brand/company.
         brandWebsite (str): The website of the brand/company.
         brandDescription (str): A description of the brand/company.
         brandCountry (str, optional): The country of the brand/company. Defaults to "world".
-
+        openAiModel (str, optional): The OpenAI model to use. Defaults to openAiDefaultModel.
+    
     Returns:
         str: The company industry as determined by the LLM, translated if necessary.
     """
-    # Load the brand industry prompt template from file
     with open("prompts/brandIndustry.txt", "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
-    # Format the prompt with the provided brand information
     prompt = PromptTemplate(
         input_variables=["companyName", "companyWebsite", "companyCountry", "companyDescription"],
         template=promptTemplate
@@ -160,60 +143,51 @@ def getBrandIndustry(clientOpenai, brandName: str, brandWebsite: str, brandDescr
         companyCountry=brandCountry,
         companyDescription=brandDescription
     )
-
-    # Get the target language for the brand's country, defaulting to English
     targetLanguage = countryLanguages.get(brandCountry.lower(), 'english').lower()
 
-    # Translate the prompt if the target language is not English and translation is successful
     if targetLanguage != 'english':
         translatedPrompt = translateString(prompt, targetLanguage)
 
         if 'NULL' not in translatedPrompt:
             prompt = translatedPrompt
-
-    # Call the OpenAI API to get the company industry
     try:
         response = clientOpenai.responses.create(
-            model="gpt-4o-mini-2024-07-18",
+            model=openAiModel,
             input=prompt,
-            # max_tokens=500,
             temperature=0.7,
             timeout=30,
             tools=[{"type": "web_search_preview"}],
         )
-        # Extract the industry from the response
         messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
         result = next(iter(messagesTexts.values()), "")
 
         if not result or result.strip() == "":
             raise ValueError("Empty response received from OpenAI API")
-        
         return result
     except Exception as e:
         print(f"Error in getBrandIndustry: {e}")
         raise Exception(f"Failed to get brand industry: {str(e)}")
 
 
-def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDescription: str, brandIndustry: str, brandCountry: str = "world") -> dict:
+def getBrandCompetitors(clientOpenai: Any, brandName: str, brandWebsite: str, brandDescription: str, brandIndustry: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel) -> Dict[str, Any]:
     """
     Retrieves the company's competitors using OpenAI's responses API and the brandCompetitors prompt template.
-
+    
     Args:
-        clientOpenai: An initialized OpenAI client instance.
+        clientOpenai (Any): An initialized OpenAI client instance.
         brandName (str): The name of the brand/company.
         brandWebsite (str): The website of the brand/company.
         brandDescription (str): A description of the brand/company.
         brandIndustry (str): The industry in which the brand/company operates.
         brandCountry (str, optional): The country of the brand/company. Defaults to "world".
-
+        openAiModel (str, optional): The OpenAI model to use. Defaults to openAiDefaultModel.
+    
     Returns:
-        dict: A dictionary containing the competitors, parsed from the JSON response.
+        Dict[str, Any]: A dictionary containing the competitors, parsed from the JSON response.
     """
-    # Load the brand competitors prompt template from file
     with open("prompts/brandCompetitors.txt", "r", encoding="utf-8") as file:
         promptTemplate = file.read()
-
-    # Format the prompt with the provided brand information
+    
     prompt = PromptTemplate(
         input_variables=["companyName", "companyWebsite", "companyCountry", "companyDescription", "companyIndustry"],
         template=promptTemplate
@@ -224,66 +198,51 @@ def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDe
         companyDescription=brandDescription,
         companyIndustry=brandIndustry
     )
-
-    # Get the target language for the brand's country, defaulting to English
     targetLanguage = countryLanguages.get(brandCountry.lower(), 'english').lower()
 
-    # Translate the prompt if the target language is not English and translation is successful
     if targetLanguage != 'english':
         translatedPrompt = translateString(prompt, targetLanguage)
 
         if 'NULL' not in translatedPrompt:
             prompt = translatedPrompt
-
-    # Call the OpenAI API to get the competitors with structured output
     try:
         response = clientOpenai.responses.create(
-            model="gpt-4o-mini-2024-07-18",
+            model=openAiModel,
             input=prompt,
             temperature=0.7,
             timeout=30,
             tools=[{"type": "web_search_preview"}],
         )
-        
-        # Extract the competitors from the response
         messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
         rawJson = next(iter(messagesTexts.values()), "")
 
-        # Remove code block markers if present
         if rawJson.startswith("```json"):
             rawJson = rawJson[len("```json"):].strip()
-        
         if rawJson.endswith("```"):
             rawJson = rawJson[:-3].strip()
-
         if not rawJson.strip():
             raise ValueError("No JSON output received from OpenAI API.")
-
-        # Parse and return the JSON as a Python dictionary
         return json.loads(rawJson)
-            
     except Exception as e:
         print(f"Error in getBrandCompetitors: {e}")
-        # Return a fallback structure instead of raising an exception
         return {"competitors": []}
 
 
-def getBrandName(clientOpenai, brandDescription: str) -> str:
+def getBrandName(clientOpenai: Any, brandDescription: str, openAiModel: str = openAiDefaultModel) -> str:
     """
     Retrieves the company name using OpenAI's responses API and the brandName prompt template.
-
+    
     Args:
-        clientOpenai: An initialized OpenAI client instance.
+        clientOpenai (Any): An initialized OpenAI client instance.
         brandDescription (str): A description of the brand/company.
-
+        openAiModel (str, optional): The OpenAI model to use. Defaults to openAiDefaultModel.
+    
     Returns:
         str: The company name as determined by the LLM.
     """
-    # Load the brand name prompt template from file
     with open("prompts/brandName.txt", "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
-    # Format the prompt with the provided brand description
     prompt = PromptTemplate(
         input_variables=["companyDescription"],
         template=promptTemplate
@@ -291,72 +250,69 @@ def getBrandName(clientOpenai, brandDescription: str) -> str:
         companyDescription=brandDescription
     )
 
-    # Call the OpenAI API to get the company name with structured output
     try:
         response = clientOpenai.responses.create(
-            model="gpt-4o-mini-2024-07-18",
+            model=openAiModel,
             input=prompt,
             temperature=0.7,
             timeout=30,
             tools=[{"type": "web_search_preview"}],
         )
-        # Extract the name from the structured response
         messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
         result = next(iter(messagesTexts.values()), "")
-        
+
         try:
             parsedResult = json.loads(result)
             name = parsedResult.get("name", "")
             if name and name.strip():
                 return name
             else:
-                # Extract a reasonable name from the description or use a fallback
                 words = brandDescription.split()
 
                 for word in words:
-                    if word[0].isupper() and len(word) > 2 and not word.lower() in ['the', 'and', 'for', 'with', 'this', 'that']:
+                    if word[0].isupper() and len(word) > 2 and word.lower() not in ['the', 'and', 'for', 'with', 'this', 'that']:
                         return word
-                
-                # If no suitable name found, return a generic business name
+                    
                 return "Business Entity"
         except json.JSONDecodeError:
-            # If structured response fails, try to use the raw content
             if result and result.strip() and result.strip().upper() != "NULL":
                 return result
             else:
-                # Extract a reasonable name from the description or use a fallback
                 words = brandDescription.split()
+
                 for word in words:
-                    if word[0].isupper() and len(word) > 2 and not word.lower() in ['the', 'and', 'for', 'with', 'this', 'that']:
+                    if word[0].isupper() and len(word) > 2 and word.lower() not in ['the', 'and', 'for', 'with', 'this', 'that']:
                         return word
-                # If no suitable name found, return a generic business name
+                    
                 return "Business Entity"
     except Exception as e:
         print(f"Error in getBrandName: {e}")
         raise Exception(f"Failed to get brand name: {str(e)}")
 
 
-def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world") -> dict:
+def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world") -> Dict[str, Any]:
     """
-    Retrieves the company description and industry using OpenAI's responses API and prompt templates.
-
+    Retrieves the company description, industry, competitors, and name using OpenAI's responses API and prompt templates.
+    
     Args:
         brandName (str): The name of the brand/company.
         brandWebsite (str): The website of the brand/company.
         brandCountry (str, optional): The country of the brand/company. Defaults to "world".
-
+    
     Returns:
-        dict: A dictionary with keys 'description' and 'industry'.
+        Dict[str, Any]: A dictionary with keys 'description', 'industry', 'competitors', and 'name'.
     """
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    apiKey = os.getenv("OPENAI_API_KEY")
+
+    if not apiKey:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
-    clientOpenai = OpenAI(api_key=api_key)
+    
+    clientOpenai = OpenAI(api_key=apiKey)
     brandDescription = getBrandDescription(clientOpenai, brandName, brandWebsite, brandCountry)
     brandIndustry = getBrandIndustry(clientOpenai, brandName, brandWebsite, brandDescription, brandCountry)
     brandCompetitors = getBrandCompetitors(clientOpenai, brandName, brandWebsite, brandDescription, brandIndustry, brandCountry)
     brandName = getBrandName(clientOpenai, brandDescription)
-    
+
     return {
         "description": brandDescription,
         "industry": brandIndustry,
@@ -365,114 +321,142 @@ def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world
     }
 
 
-def formatQueryAnalysis(raw_analysis: str) -> str:
+def formatQueryAnalysis(rawAnalysis: str) -> str:
     """
     Formats raw query analysis output into a readable markdown format.
     
     Args:
-        raw_analysis (str): Raw query analysis text
+        rawAnalysis (str): Raw query analysis text.
     
     Returns:
-        str: Formatted markdown analysis report
+        str: Formatted markdown analysis report.
     """
-    import re
-    
-    # Split by lines and process each query result
-    lines = raw_analysis.strip().split('\n')
-    
-    formatted_output = []
-    formatted_output.append("# 📊 Detailed Query Analysis Report\n")
-    
-    # Extract brand name from context if available
-    brand_match = re.search(r'Context:.*?mention of (?:the brand )?([A-Z][a-z]+)', raw_analysis)
-    brand_name = brand_match.group(1) if brand_match else "Brand"
-    
-    # Count total queries
-    query_count = len([line for line in lines if line.startswith('❌') or line.startswith('✅')])
-    
-    formatted_output.append("## Query Performance Summary")
-    formatted_output.append(f"- **Total Queries Tested**: {query_count}")
-    formatted_output.append("- **LLM Model**: gpt-4o-mini-2024-07-18")
-    formatted_output.append(f"- **Brand**: {brand_name}")
-    formatted_output.append("- **Overall Performance**: ❌ No mentions detected\n")
-    formatted_output.append("---\n")
-    formatted_output.append("## 🔍 Individual Query Results\n")
-    
-    query_num = 1
-    current_query = {}
-    
+    lines = rawAnalysis.strip().split('\n')
+    formattedOutput = []
+    formattedOutput.append("# 𝄞F4CA Detailed Query Analysis Report\n")
+    brandMatch = re.search(r'Context:.*?mention of (?:the brand )?([A-Z][a-z]+)', rawAnalysis)
+    brandName = brandMatch.group(1) if brandMatch else "Brand"
+    queryCount = len([line for line in lines if line.startswith('❌') or line.startswith('✅')])
+
+    formattedOutput.append("## Query Performance Summary")
+    formattedOutput.append(f"- **Total Queries Tested**: {queryCount}")
+    formattedOutput.append("- **LLM Model**: gpt-4o-mini-2024-07-18")
+    formattedOutput.append(f"- **Brand**: {brandName}")
+    formattedOutput.append("- **Overall Performance**: ❌ No mentions detected\n")
+    formattedOutput.append("---\n")
+    formattedOutput.append("## 𝄞F50D Individual Query Results\n")
+
+    queryNum = 1
+    currentQuery = {}
+
     for line in lines:
         line = line.strip()
-        
+
         if line.startswith('❌') or line.startswith('✅'):
-            # Parse query line
-            status_icon = '❌' if line.startswith('❌') else '✅'
-            
-            # Extract topic and prompt from the complex format
-            topic_match = re.search(r"'topic': '([^']+)'", line)
-            prompt_match = re.search(r"'prompt': '([^']+)'", line)
-            model_match = re.search(r'\(([^)]+)\)', line)
-            
-            topic = topic_match.group(1) if topic_match else f"Query {query_num}"
-            prompt = prompt_match.group(1) if prompt_match else "No prompt available"
-            model = model_match.group(1) if model_match else "gpt-4o-mini-2024-07-18"
-            
-            current_query = {
-                'status_icon': status_icon,
+            statusIcon = '❌' if line.startswith('❌') else '✅'
+            topicMatch = re.search(r"'topic': '([^']+)'", line)
+            promptMatch = re.search(r"'prompt': '([^']+)'", line)
+            modelMatch = re.search(r'\(([^)]+)\)', line)
+            topic = topicMatch.group(1) if topicMatch else f"Query {queryNum}"
+            prompt = promptMatch.group(1) if promptMatch else "No prompt available"
+            model = modelMatch.group(1) if modelMatch else "gpt-4o-mini-2024-07-18"
+            currentQuery = {
+                'status_icon': statusIcon,
                 'topic': topic,
                 'prompt': prompt,
                 'model': model,
-                'number': query_num
+                'number': queryNum
             }
-            
         elif line.startswith('Not mentioned') or line.startswith('Mentioned'):
-            # Parse status and sentiment
             parts = line.split('|')
             status = parts[0].strip()
             sentiment = parts[1].strip().replace('Sentiment: ', '') if len(parts) > 1 else 'neutral'
-            
-            current_query['status'] = status
-            current_query['sentiment'] = sentiment
-            
+            currentQuery['status'] = status
+            currentQuery['sentiment'] = sentiment
         elif line.startswith('Context:'):
-            current_query['context'] = line.replace('Context: ', '').strip()
-            
+            currentQuery['context'] = line.replace('Context: ', '').strip()
         elif line.startswith('LLM Response:'):
-            current_query['response'] = line.replace('LLM Response: ', '').strip()
-            
-            # Output formatted query when we have all parts
-            if 'topic' in current_query:
-                formatted_output.append(f"### Query #{current_query['number']}: {current_query['topic']}")
-                formatted_output.append(f"**Prompt**: \"{current_query['prompt']}\"\n")
-                
-                formatted_output.append("| Metric | Result |")
-                formatted_output.append("|--------|--------|")
-                formatted_output.append(f"| **Status** | {current_query['status_icon']} {current_query['status']} |")
-                
-                sentiment_icon = "😊" if "positive" in current_query['sentiment'] else "😐" if "neutral" in current_query['sentiment'] else "😞"
-                formatted_output.append(f"| **Sentiment** | {sentiment_icon} {current_query['sentiment'].title()} |")
-                formatted_output.append(f"| **Brand Context** | {current_query.get('context', 'No context available')} |\n")
-                
-                formatted_output.append("**LLM Response Preview**:")
-                response_preview = current_query['response'][:100] + "..." if len(current_query['response']) > 100 else current_query['response']
-                formatted_output.append(f"> {response_preview}\n")
-                
-                # Add analysis based on status
-                if current_query['status_icon'] == '❌':
-                    formatted_output.append(f"**Analysis**: The query did not mention {brand_name}, indicating low brand awareness for this search intent. Consider optimizing content for this topic area.\n")
+            currentQuery['response'] = line.replace('LLM Response: ', '').strip()
+
+            if 'topic' in currentQuery:
+                formattedOutput.append(f"### Query #{currentQuery['number']}: {currentQuery['topic']}")
+                formattedOutput.append(f"**Prompt**: \"{currentQuery['prompt']}\"\n")
+                formattedOutput.append("| Metric | Result |")
+                formattedOutput.append("|--------|--------|")
+                formattedOutput.append(f"| **Status** | {currentQuery['status_icon']} {currentQuery['status']} |")
+                sentimentIcon = "😊" if "positive" in currentQuery['sentiment'] else "😐" if "neutral" in currentQuery['sentiment'] else "😞"
+                formattedOutput.append(f"| **Sentiment** | {sentimentIcon} {currentQuery['sentiment'].title()} |")
+                formattedOutput.append(f"| **Brand Context** | {currentQuery.get('context', 'No context available')} |\n")
+                formattedOutput.append("**LLM Response Preview**:")
+                responsePreview = currentQuery['response'][:100] + "..." if len(currentQuery['response']) > 100 else currentQuery['response']
+                formattedOutput.append(f"> {responsePreview}\n")
+                if currentQuery['status_icon'] == '❌':
+                    formattedOutput.append(f"**Analysis**: The query did not mention {brandName}, indicating low brand awareness for this search intent. Consider optimizing content for this topic area.\n")
                 else:
-                    formatted_output.append(f"**Analysis**: {brand_name} was mentioned, showing good brand visibility for this query type.\n")
-                
-                formatted_output.append("---\n")
-                query_num += 1
-                current_query = {}
+                    formattedOutput.append(f"**Analysis**: {brandName} was mentioned, showing good brand visibility for this query type.\n")
+                formattedOutput.append("---\n")
+                queryNum += 1
+                currentQuery = {}
+
+    formattedOutput.append("## 𝄞F4C8 Optimization Recommendations\n")
+    formattedOutput.append("1. **🎯 Content Strategy**: Create targeted content addressing the query topics where brand wasn't mentioned")
+    formattedOutput.append("2. **🔍 SEO & GEO Optimization**: Optimize for the specific phrases and contexts tested")
+    formattedOutput.append("3. **📝 Thought Leadership**: Develop authoritative content in relevant topic areas")
+    formattedOutput.append("4. **🤝 Industry Presence**: Increase visibility in industry discussions and platforms")
+    formattedOutput.append("5. **📊 Regular Monitoring**: Set up regular GEO monitoring for these query types")
+
+    return '\n'.join(formattedOutput)
+
+
+def extractMentionedBrands(llmOutput: str, openAiModel: str = openAiDefaultModel) -> List[Dict[str, Any]]:
+    """
+    Extracts mentioned brands from the LLM output using a prompt and OpenAI API.
     
-    # Add optimization recommendations
-    formatted_output.append("## 📈 Optimization Recommendations\n")
-    formatted_output.append("1. **🎯 Content Strategy**: Create targeted content addressing the query topics where brand wasn't mentioned")
-    formatted_output.append("2. **🔍 SEO & GEO Optimization**: Optimize for the specific phrases and contexts tested")
-    formatted_output.append("3. **📝 Thought Leadership**: Develop authoritative content in relevant topic areas")
-    formatted_output.append("4. **🤝 Industry Presence**: Increase visibility in industry discussions and platforms")
-    formatted_output.append("5. **📊 Regular Monitoring**: Set up regular GEO monitoring for these query types")
+    Args:
+        llmOutput (str): The output string from the LLM to analyze.
+        openAiModel (str, optional): The OpenAI model to use. Defaults to openAiDefaultModel.
     
-    return '\n'.join(formatted_output)
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries with extracted brand information.
+    """
+    apiKey = os.getenv("OPENAI_API_KEY")
+
+    if not apiKey:
+        raise ValueError("OPENAI_API_KEY environment variable is not set")
+    
+    llmClient = OpenAI(api_key=apiKey)
+
+    with open("prompts/extractBrandsAndInfo.txt", "r", encoding="utf-8") as file:
+        promptTemplate = file.read()
+
+    prompt = PromptTemplate(
+        input_variables=["llmOutput"],
+        template=promptTemplate
+    ).format(
+        llmOutput=llmOutput,
+    )
+    response = llmClient.chat.completions.create(
+        model=openAiModel,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
+    )
+    rawJson = response.choices[0].message.content
+
+    if rawJson.startswith("```json"):
+        rawJson = rawJson[len("```json"):].strip()
+
+    if rawJson.endswith("```"):
+        rawJson = rawJson[:-3].strip()
+
+    if not rawJson.strip():
+        raise ValueError("No JSON output received from OpenAI API.")
+
+    try:
+        return json.loads(rawJson)
+    except json.JSONDecodeError:
+        # Try to extract the first JSON array from the string
+        match = re.search(r'\\[.*\\]', rawJson, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        print("Malformed JSON from LLM:\n", rawJson)
+        raise

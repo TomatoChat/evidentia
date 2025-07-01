@@ -37,7 +37,7 @@ def getResponseInfo(response) -> tuple[dict, dict]:
     return messagesAnnotations, messagesTexts
 
 
-def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str, brandIndustry: str, totalQueries: int = 100):
+def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str, brandIndustry: str, totalQueries: int = 100) -> list[dict]:
     """
     Generates a set of coherent queries related to a brand using an LLM (OpenAI) with web search capabilities.
 
@@ -119,7 +119,7 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
         raise ValueError(f"Failed to generate queries: {e}")
     
 
-def runBulkQueries(queries:list[dict], llmModel:str="gpt-4o-mini-2024-07-18"):
+def runBulkQueries(queries:list[dict], llmModel:str="gpt-4o-mini-2024-07-18") -> list[dict]:
     """
     Runs a bulk of queries using an LLM (OpenAI) with web search capabilities.
 
