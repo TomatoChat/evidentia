@@ -382,7 +382,6 @@ The server will automatically reload when you make changes to the code.
 
 Here's how to format detailed query analysis results for better readability:
 
-```markdown
 # 📊 Detailed Query Analysis Report
 
 ## Query Performance Summary

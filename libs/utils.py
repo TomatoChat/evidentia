@@ -26,12 +26,9 @@ def translateString(stringToTranslate: str, targetLanguage: str, openAiModel: st
     Returns:
         str: The translated string, or an empty string if translation fails.
     """
-    apiKey = os.getenv("OPENAI_API_KEY")
+    return stringToTranslate
 
-    if not apiKey:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-    
-    llmClient = OpenAI(api_key=apiKey)
+    llmClient = OpenAI()
 
     with open("prompts/translateString.txt", "r", encoding="utf-8") as file:
         promptTemplate = file.read()
@@ -52,7 +49,7 @@ def translateString(stringToTranslate: str, targetLanguage: str, openAiModel: st
     return response.choices[0].message.content
 
 
-def getBrandDescription(clientOpenai: Any, brandName: str, brandWebsite: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel) -> str:
+def getBrandDescription(brandName: str, brandWebsite: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel, clientOpenai: Any = OpenAI()) -> str:
     """
     Retrieves the company description using OpenAI's responses API and the brandDescription prompt template.
     
@@ -116,7 +113,7 @@ def getBrandDescription(clientOpenai: Any, brandName: str, brandWebsite: str, br
         raise Exception(f"Failed to get brand description: {str(e)}")
 
 
-def getBrandIndustry(clientOpenai: Any, brandName: str, brandWebsite: str, brandDescription: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel) -> str:
+def getBrandIndustry(brandName: str, brandWebsite: str, brandDescription: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel, clientOpenai: Any = OpenAI()) -> str:
     """
     Retrieves the company industry using OpenAI's responses API and the brandIndustry prompt template.
     
@@ -169,7 +166,7 @@ def getBrandIndustry(clientOpenai: Any, brandName: str, brandWebsite: str, brand
         raise Exception(f"Failed to get brand industry: {str(e)}")
 
 
-def getBrandCompetitors(clientOpenai: Any, brandName: str, brandWebsite: str, brandDescription: str, brandIndustry: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel) -> Dict[str, Any]:
+def getBrandCompetitors(brandName: str, brandWebsite: str, brandDescription: str, brandIndustry: str, brandCountry: str = "world", openAiModel: str = openAiDefaultModel, clientOpenai: Any = OpenAI()) -> Dict[str, Any]:
     """
     Retrieves the company's competitors using OpenAI's responses API and the brandCompetitors prompt template.
     
@@ -218,17 +215,20 @@ def getBrandCompetitors(clientOpenai: Any, brandName: str, brandWebsite: str, br
 
         if rawJson.startswith("```json"):
             rawJson = rawJson[len("```json"):].strip()
+
         if rawJson.endswith("```"):
             rawJson = rawJson[:-3].strip()
+
         if not rawJson.strip():
             raise ValueError("No JSON output received from OpenAI API.")
+        
         return json.loads(rawJson)
     except Exception as e:
         print(f"Error in getBrandCompetitors: {e}")
         return {"competitors": []}
 
 
-def getBrandName(clientOpenai: Any, brandDescription: str, openAiModel: str = openAiDefaultModel) -> str:
+def getBrandName(brandDescription: str, openAiModel: str = openAiDefaultModel, clientOpenai: Any = OpenAI()) -> str:
     """
     Retrieves the company name using OpenAI's responses API and the brandName prompt template.
     
@@ -259,32 +259,18 @@ def getBrandName(clientOpenai: Any, brandDescription: str, openAiModel: str = op
             tools=[{"type": "web_search_preview"}],
         )
         messagesAnnotations, messagesTexts = openaiAnalytics.getResponseInfo(response)
-        result = next(iter(messagesTexts.values()), "")
+        rawJson = next(iter(messagesTexts.values()), "")
 
-        try:
-            parsedResult = json.loads(result)
-            name = parsedResult.get("name", "")
-            if name and name.strip():
-                return name
-            else:
-                words = brandDescription.split()
+        if rawJson.startswith("```json"):
+            rawJson = rawJson[len("```json"):].strip()
 
-                for word in words:
-                    if word[0].isupper() and len(word) > 2 and word.lower() not in ['the', 'and', 'for', 'with', 'this', 'that']:
-                        return word
-                    
-                return "Business Entity"
-        except json.JSONDecodeError:
-            if result and result.strip() and result.strip().upper() != "NULL":
-                return result
-            else:
-                words = brandDescription.split()
+        if rawJson.endswith("```"):
+            rawJson = rawJson[:-3].strip()
 
-                for word in words:
-                    if word[0].isupper() and len(word) > 2 and word.lower() not in ['the', 'and', 'for', 'with', 'this', 'that']:
-                        return word
-                    
-                return "Business Entity"
+        if not rawJson.strip():
+            raise ValueError("No JSON output received from OpenAI API.")
+        
+        return json.loads(rawJson)
     except Exception as e:
         print(f"Error in getBrandName: {e}")
         raise Exception(f"Failed to get brand name: {str(e)}")
@@ -301,17 +287,12 @@ def getCompanyInfo(brandName: str, brandWebsite: str, brandCountry: str = "world
     
     Returns:
         Dict[str, Any]: A dictionary with keys 'description', 'industry', 'competitors', and 'name'.
-    """
-    apiKey = os.getenv("OPENAI_API_KEY")
-
-    if not apiKey:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-    
-    clientOpenai = OpenAI(api_key=apiKey)
-    brandDescription = getBrandDescription(clientOpenai, brandName, brandWebsite, brandCountry)
-    brandIndustry = getBrandIndustry(clientOpenai, brandName, brandWebsite, brandDescription, brandCountry)
-    brandCompetitors = getBrandCompetitors(clientOpenai, brandName, brandWebsite, brandDescription, brandIndustry, brandCountry)
-    brandName = getBrandName(clientOpenai, brandDescription)
+    """    
+    clientOpenai = OpenAI()
+    brandDescription = getBrandDescription(brandName, brandWebsite, brandCountry, clientOpenai=clientOpenai)
+    brandIndustry = getBrandIndustry(brandName, brandWebsite, brandDescription, brandCountry, clientOpenai=clientOpenai)
+    brandCompetitors = getBrandCompetitors(brandName, brandWebsite, brandDescription, brandIndustry, brandCountry, clientOpenai=clientOpenai)
+    brandName = getBrandName(brandDescription, clientOpenai=clientOpenai)
 
     return {
         "description": brandDescription,
@@ -419,12 +400,7 @@ def extractMentionedBrands(llmOutput: str, openAiModel: str = openAiDefaultModel
     Returns:
         List[Dict[str, Any]]: A list of dictionaries with extracted brand information.
     """
-    apiKey = os.getenv("OPENAI_API_KEY")
-
-    if not apiKey:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-    
-    llmClient = OpenAI(api_key=apiKey)
+    llmClient = OpenAI()
 
     with open("prompts/extractBrandsAndInfo.txt", "r", encoding="utf-8") as file:
         promptTemplate = file.read()

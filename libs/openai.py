@@ -50,14 +50,8 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
 
     Returns:
         list: A list of dictionaries containing the generated queries, parsed from the JSON response.
-    """
-    # Initialize the OpenAI client
-    apiKey = os.getenv("OPENAI_API_KEY")
-
-    if not apiKey:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-    
-    llmClient = OpenAI(api_key=apiKey)
+    """    
+    llmClient = OpenAI()
 
     try:
         # Load the prompt template for generating queries from file
@@ -126,14 +120,8 @@ def runBulkQueries(queries:list[dict], llmModel:str="gpt-4o-mini-2024-07-18") ->
     Args:
         queries (list[dict]): A list of dictionaries containing the queries to run.
         llmModel (str, optional): The model to use for the queries. Defaults to "gpt-4o-mini-2024-07-18".
-    """
-
-    apiKey = os.getenv("OPENAI_API_KEY")
-
-    if not apiKey:
-        raise ValueError("OPENAI_API_KEY environment variable is not set")
-    
-    llmClient = OpenAI(api_key=apiKey)
+    """    
+    llmClient = OpenAI()
     results = []
     
     for query in queries:

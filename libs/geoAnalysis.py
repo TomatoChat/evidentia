@@ -5,6 +5,7 @@ import time
 from openai import OpenAI
 from langchain.prompts import PromptTemplate
 
+
 def analyze_llm_brand_positioning_streaming(brand_name: str, competitors: List[str], queries: List[str], llm_models: List[str] = None, progress_callback=None) -> Dict[str, Any]:
     """
     Streaming version of LLM brand positioning analysis with progress updates.
@@ -182,6 +183,7 @@ def analyze_llm_brand_positioning_streaming(brand_name: str, competitors: List[s
     
     return analysis_results
 
+
 def analyze_llm_brand_positioning(brand_name: str, competitors: List[str], queries: List[str], llm_models: List[str] = None) -> Dict[str, Any]:
     """
     Analyze how a brand positions in LLM responses across different queries.
@@ -326,6 +328,7 @@ def analyze_llm_brand_positioning(brand_name: str, competitors: List[str], queri
     
     return analysis_results
 
+
 def get_llm_response_streaming(client: OpenAI, query: str, model: str, log_progress=None) -> str:
     """
     Get response from LLM for a given query with streaming progress updates and retry logic.
@@ -395,6 +398,7 @@ def get_llm_response_streaming(client: OpenAI, query: str, model: str, log_progr
                 print(f"Error getting LLM response after {max_retries} attempts: {e}")
                 return f"Error: Could not get response from {model} after {max_retries} attempts: {str(e)[:100]}"
 
+
 def get_llm_response(client: OpenAI, query: str, model: str) -> str:
     """
     Get response from LLM for a given query.
@@ -420,6 +424,7 @@ def get_llm_response(client: OpenAI, query: str, model: str) -> str:
     except Exception as e:
         print(f"Error getting LLM response: {e}")
         return f"Error: Could not get response from {model}"
+
 
 def analyze_brand_in_response_streaming(client: OpenAI, response: str, brand_name: str, competitors: List[str], log_progress=None) -> Dict[str, Any]:
     """
@@ -501,6 +506,7 @@ def analyze_brand_in_response_streaming(client: OpenAI, response: str, brand_nam
             "competitors_mentioned": []
         }
 
+
 def analyze_brand_in_response(client: OpenAI, response: str, brand_name: str, competitors: List[str]) -> Dict[str, Any]:
     """
     Analyze how a brand is positioned within an LLM response.
@@ -569,6 +575,7 @@ def analyze_brand_in_response(client: OpenAI, response: str, brand_name: str, co
             "competitors_mentioned": []
         }
 
+
 def get_geo_optimization_suggestions(analysis_results: Dict[str, Any]) -> List[str]:
     """
     Generate GEO optimization suggestions based on analysis results.
@@ -605,6 +612,7 @@ def get_geo_optimization_suggestions(analysis_results: Dict[str, Any]) -> List[s
         suggestions.append("🎉 Strong GEO performance! Continue monitoring and optimizing content for emerging queries.")
     
     return suggestions
+
 
 def generate_llm_test_queries(brand_name: str, industry: str, use_case: str = "general") -> List[str]:
     """
