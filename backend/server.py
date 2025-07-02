@@ -8,29 +8,44 @@ load_dotenv(override=True)
 # Also try loading from explicit path
 load_dotenv(dotenv_path='.env', override=True)
 
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template
 from flask_cors import CORS
 import json
 import time
 import libs.utils as utils
 import libs.openai as openaiAnalytics
+import libs.perplexity as perplexityAnalytics
 import libs.geo_analysis as geo_analysis
 import libs.search_analysis as search_analysis
 import libs.email_service as email_service
+from libs.convex_client import get_convex_client
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# In-memory storage for user emails (in production, use a database)
+# Initialize Convex client
+try:
+    convex_client = get_convex_client()
+    print("✅ Convex client initialized successfully")
+except Exception as e:
+    print(f"❌ Failed to initialize Convex client: {e}")
+    convex_client = None
+
+# In-memory storage for user emails (fallback if Convex fails)
 user_emails = {}
 
 # Print environment variables for debugging
 print("=== Environment Variables ===")
 api_key = os.getenv('OPENAI_API_KEY', 'NOT SET')
 print(f"OPENAI_API_KEY: {api_key[:10] if api_key != 'NOT SET' else 'NOT SET'}{'*' * 20 if api_key != 'NOT SET' else ''}")
+perplexity_key = os.getenv('PERPLEXITY_API_KEY', 'NOT SET')
+print(f"PERPLEXITY_API_KEY: {perplexity_key[:10] if perplexity_key != 'NOT SET' else 'NOT SET'}{'*' * 20 if perplexity_key != 'NOT SET' else ''}")
+convex_url = os.getenv('CONVEX_URL', 'NOT SET')
+print(f"CONVEX_URL: {convex_url[:20] if convex_url != 'NOT SET' else 'NOT SET'}{'*' * 10 if convex_url != 'NOT SET' else ''}")
 print(f"PROJECT_DIRECTORY: {os.getenv('PROJECT_DIRECTORY', 'NOT SET')}")
 print(f"Current working directory: {os.getcwd()}")
-print(f"API key length: {len(api_key) if api_key != 'NOT SET' else 0}")
+print(f"OpenAI API key length: {len(api_key) if api_key != 'NOT SET' else 0}")
+print(f"Perplexity API key length: {len(perplexity_key) if perplexity_key != 'NOT SET' else 0}")
 print("=============================")
 
 @app.route('/')
@@ -52,6 +67,9 @@ def api_info():
             '/stream-brand-info',
             '/stream-generate-queries', 
             '/stream-test-queries',
+            '/perplexity-generate-queries',
+            '/perplexity-web-search',
+            '/perplexity-brand-analysis',
             '/send-report',
             '/get-llm-models',
             '/health'
@@ -67,12 +85,23 @@ def collect_email():
         if not email:
             return jsonify({'error': 'Email is required'}), 400
         
-        # Generate a simple session ID and store the email
-        import uuid
-        session_id = str(uuid.uuid4())
-        user_emails[session_id] = email
-        
-        print(f"Collected email: {email} with session ID: {session_id}")
+        # Try to use Convex, fallback to in-memory storage
+        if convex_client:
+            try:
+                session_id = convex_client.create_session(email)
+                print(f"Collected email: {email} with session ID: {session_id} (stored in Convex)")
+            except Exception as e:
+                print(f"Convex error, falling back to in-memory: {e}")
+                import uuid
+                session_id = str(uuid.uuid4())
+                user_emails[session_id] = email
+                print(f"Collected email: {email} with session ID: {session_id} (stored in memory)")
+        else:
+            # Fallback to in-memory storage
+            import uuid
+            session_id = str(uuid.uuid4())
+            user_emails[session_id] = email
+            print(f"Collected email: {email} with session ID: {session_id} (stored in memory - no Convex)")
         
         return jsonify({
             'success': True, 
@@ -180,6 +209,7 @@ def stream_brand_info():
     brand_name = data.get('brandName')
     brand_website = data.get('brandWebsite')
     brand_country = data.get('brandCountry', 'world')
+    session_id = data.get('session_id')  # Get session_id to save results
     
     def generate():
         try:
@@ -212,6 +242,24 @@ def stream_brand_info():
                 "competitors": brand_competitors,
                 "name": final_brand_name
             }
+            
+            # Save to Convex if available and session_id provided
+            if convex_client and session_id:
+                try:
+                    convex_client.save_brand_analysis(
+                        session_id=session_id,
+                        brand_name=final_brand_name,
+                        brand_website=brand_website,
+                        brand_country=brand_country,
+                        brand_description=brand_description,
+                        brand_industry=brand_industry,
+                        competitors=brand_competitors,
+                        status="completed",
+                        result_data=result
+                    )
+                    print(f"✅ Brand analysis saved to Convex for session {session_id}")
+                except Exception as e:
+                    print(f"❌ Failed to save brand analysis to Convex: {e}")
             
             yield f"data: {json.dumps({'status': 'Analysis complete!', 'step': 'complete', 'result': result})}\n\n"
             
@@ -394,8 +442,20 @@ def send_report():
         if not analysis_result:
             return jsonify({'error': 'Analysis result is required'}), 400
         
-        # Get the email for this session
-        recipient_email = user_emails.get(session_id)
+        # Get the email for this session from Convex first, then fallback to in-memory
+        recipient_email = None
+        if convex_client:
+            try:
+                session = convex_client.get_session(session_id)
+                if session:
+                    recipient_email = session.get('email')
+            except Exception as e:
+                print(f"Error getting session from Convex: {e}")
+        
+        # Fallback to in-memory storage
+        if not recipient_email:
+            recipient_email = user_emails.get(session_id)
+        
         if not recipient_email:
             return jsonify({'error': 'Email not found for this session'}), 400
         
@@ -407,8 +467,33 @@ def send_report():
         )
         
         if success:
+            # Save report to Convex
+            if convex_client:
+                try:
+                    convex_client.save_report(
+                        session_id=session_id,
+                        report_type="combined",
+                        report_data=analysis_result,
+                        email_sent=True,
+                        recipient_email=recipient_email,
+                        brand_name=brand_name
+                    )
+                    print(f"✅ Report saved to Convex for session {session_id}")
+                except Exception as e:
+                    print(f"❌ Failed to save report to Convex: {e}")
+            
             # Clean up the session after successful send
-            del user_emails[session_id]
+            if session_id in user_emails:
+                del user_emails[session_id]
+            
+            # Clean up session from Convex as well
+            if convex_client:
+                try:
+                    convex_client.delete_session(session_id)
+                    print(f"✅ Session {session_id} cleaned up from Convex")
+                except Exception as e:
+                    print(f"❌ Failed to clean up session from Convex: {e}")
+            
             return jsonify({
                 'success': True, 
                 'message': f'Report sent successfully to {recipient_email}'
@@ -422,6 +507,89 @@ def send_report():
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({'status': 'healthy'})
+
+@app.route('/perplexity-generate-queries', methods=['POST'])
+def perplexity_generate_queries():
+    try:
+        data = request.json
+        brand_name = data.get('brandName')
+        brand_country = data.get('brandCountry', 'world')
+        brand_description = data.get('brandDescription')
+        brand_industry = data.get('brandIndustry')
+        total_queries = data.get('totalQueries', 10)
+        
+        if not all([brand_name, brand_description, brand_industry]):
+            return jsonify({'error': 'brandName, brandDescription, and brandIndustry are required'}), 400
+        
+        queries = perplexityAnalytics.getCoherentQueries(
+            brand_name, brand_country, brand_description, brand_industry, total_queries
+        )
+        return jsonify({'queries': queries, 'source': 'perplexity'})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/perplexity-web-search', methods=['POST'])
+def perplexity_web_search():
+    try:
+        data = request.json
+        query = data.get('query')
+        context = data.get('context', '')
+        
+        if not query:
+            return jsonify({'error': 'query is required'}), 400
+        
+        search_results = perplexityAnalytics.webSearchAndAnalyze(query, context)
+        return jsonify(search_results)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/perplexity-brand-analysis', methods=['POST'])
+def perplexity_brand_analysis():
+    try:
+        data = request.json
+        brand_name = data.get('brandName')
+        brand_website = data.get('brandWebsite')
+        competitors = data.get('competitors', [])
+        
+        if not brand_name or not brand_website:
+            return jsonify({'error': 'brandName and brandWebsite are required'}), 400
+        
+        analysis_result = perplexityAnalytics.getBrandAnalysis(
+            brand_name, brand_website, competitors
+        )
+        return jsonify(analysis_result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/stream-perplexity-search', methods=['POST'])
+def stream_perplexity_search():
+    data = request.json
+    query = data.get('query')
+    context = data.get('context', '')
+    
+    def generate():
+        try:
+            if not query:
+                yield f"data: {json.dumps({'error': 'query is required'})}\n\n"
+                return
+            
+            yield f"data: {json.dumps({'status': 'Starting Perplexity search...', 'step': 'init'})}\n\n"
+            time.sleep(0.1)
+            
+            yield f"data: {json.dumps({'status': 'Searching web with Perplexity AI...', 'step': 'search'})}\n\n"
+            search_results = perplexityAnalytics.webSearchAndAnalyze(query, context)
+            
+            yield f"data: {json.dumps({'status': 'Search complete!', 'step': 'complete', 'result': search_results})}\n\n"
+            
+        except Exception as e:
+            error_msg = f"Perplexity search error: {str(e)}"
+            print(f"ERROR in stream_perplexity_search: {error_msg}")
+            yield f"data: {json.dumps({'error': error_msg})}\n\n"
+    
+    return Response(generate(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

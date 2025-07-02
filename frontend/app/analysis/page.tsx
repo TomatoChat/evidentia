@@ -6,6 +6,13 @@ import { MiniNavbar } from "@/components/Header";
 import { cn } from "@/lib/utils";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import SourceAttribution from "@/components/SourceAttribution";
+import SourcesByQuery from "@/components/SourcesByQuery";
+import { Source } from "@/components/SourceCard";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api_cjs.cjs";
+import { convex } from "@/lib/convex";
 
 // Canvas effect components (copied from homepage)
 type Uniforms = {
@@ -26,7 +33,7 @@ interface ShaderProps {
   maxFps?: number;
 }
 
-export const CanvasRevealEffect = ({
+const CanvasRevealEffect = ({
   animationSpeed = 10,
   opacities = [0.3, 0.3, 0.3, 0.5, 0.5, 0.5, 0.8, 0.8, 0.8, 1],
   colors = [[0, 255, 255]],
@@ -342,7 +349,11 @@ interface AnalysisResult {
     topic: string;
     prompt: string;
   }>;
-  analysis?: any;
+  analysis?: {
+    optimization_suggestions?: string[];
+    sources?: Source[];
+    [key: string]: any;
+  };
 }
 
 export default function AnalysisPage() {
@@ -357,6 +368,42 @@ export default function AnalysisPage() {
   const [selectedCompetitors, setSelectedCompetitors] = useState<string[]>([]);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Authentication and database hooks
+  const { user, isAuthenticated } = convex ? useCurrentUser() : { user: null, isAuthenticated: false };
+  const saveBrandAnalysis = convex ? useMutation(api.brandAnalysis.saveBrandAnalysis) : null;
+  const linkSessionToUser = convex ? useMutation(api.users.linkSessionToUser) : null;
+
+  // Function to save analysis to database when authenticated
+  const saveAnalysisToDatabase = async (sessionId: string, data: any, sources?: Source[]) => {
+    if (!isAuthenticated || !saveBrandAnalysis || !linkSessionToUser) return;
+
+    try {
+      // Link session to authenticated user
+      if (user?.email) {
+        await linkSessionToUser({
+          session_id: sessionId,
+          email: user.email,
+        });
+      }
+
+      // Save brand analysis
+      await saveBrandAnalysis({
+        session_id: sessionId,
+        brand_name: brandData.name,
+        brand_website: brandData.website,
+        brand_country: brandData.country,
+        brand_description: brandData.description,
+        brand_industry: brandData.industry,
+        competitors: selectedCompetitors,
+        status: "completed" as const,
+        result_data: data,
+        sources: sources,
+      });
+    } catch (error) {
+      console.error("Failed to save analysis to database:", error);
+    }
+  };
 
   const handleBrandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -577,12 +624,19 @@ export default function AnalysisPage() {
                 }
 
                 if (data.step === "complete" && data.result) {
-                  setAnalysisResult({
+                  const finalResult = {
                     queries: queries,
                     analysis: data.result
-                  });
+                  };
+                  setAnalysisResult(finalResult);
                   setStep("results");
                   setAnalysisProgress(100);
+                  
+                  // Save to database if user is authenticated
+                  const sessionId = localStorage.getItem("evidentia_session_id");
+                  if (sessionId) {
+                    await saveAnalysisToDatabase(sessionId, finalResult, data.result?.sources);
+                  }
                 }
               }
             } catch (e) {
@@ -913,6 +967,13 @@ export default function AnalysisPage() {
                       ))}
                     </div>
                   </div>
+                )}
+
+                {analysisResult.analysis?.sources && analysisResult.analysis.sources.length > 0 && (
+                  <SourcesByQuery 
+                    sources={analysisResult.analysis.sources}
+                    queries={analysisResult.queries}
+                  />
                 )}
 
                 <div className="mt-8 text-center">

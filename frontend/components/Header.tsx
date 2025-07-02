@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { AuthButton } from "./AuthButton";
 
 const AnimatedNavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
   const defaultTextColor = 'text-gray-300';
@@ -104,8 +105,7 @@ export function MiniNavbar() {
         </nav>
 
         <div className="hidden sm:flex items-center gap-2 sm:gap-3">
-          {loginButtonElement}
-          {signupButtonElement}
+          <AuthButton />
         </div>
 
         <button className="sm:hidden flex items-center justify-center w-8 h-8 text-gray-300 focus:outline-none" onClick={toggleMenu} aria-label={isOpen ? 'Close Menu' : 'Open Menu'}>
@@ -127,8 +127,7 @@ export function MiniNavbar() {
           ))}
         </nav>
         <div className="flex flex-col items-center space-y-4 mt-4 w-full">
-          {loginButtonElement}
-          {signupButtonElement}
+          <AuthButton />
         </div>
       </div>
     </header>

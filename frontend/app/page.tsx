@@ -33,7 +33,7 @@ interface SignInPageProps {
   className?: string;
 }
       
-export const CanvasRevealEffect = ({
+const CanvasRevealEffect = ({
   animationSpeed = 10,
   opacities = [0.3, 0.3, 0.3, 0.5, 0.5, 0.5, 0.8, 0.8, 0.8, 1],
   colors = [[0, 255, 255]],
@@ -361,7 +361,7 @@ const Shader: React.FC<ShaderProps> = ({ source, uniforms, maxFps = 60 }) => {
 };
 
 
-export const SignInPage = ({ className }: SignInPageProps) => {
+const SignInPage = ({ className }: SignInPageProps) => {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);

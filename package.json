@@ -12,7 +12,17 @@
     "build:frontend": "cd frontend && npm run build",
     "start:prod": "cd frontend && npm start"
   },
-  "keywords": ["brand-research", "competitive-analysis", "react", "flask", "api"],
+  "keywords": [
+    "brand-research",
+    "competitive-analysis",
+    "react",
+    "flask",
+    "api"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@convex-dev/auth": "^0.0.87",
+    "convex": "^1.25.2"
+  }
 }

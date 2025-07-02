@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 import time
 from openai import OpenAI
 from langchain.prompts import PromptTemplate
+from . import perplexity
 
 def analyze_llm_brand_positioning_streaming(brand_name: str, competitors: List[str], queries: List[str], llm_models: List[str] = None, progress_callback=None) -> Dict[str, Any]:
     """
@@ -42,7 +43,9 @@ def analyze_llm_brand_positioning_streaming(brand_name: str, competitors: List[s
             "negative_positioning": 0,
             "average_mention_position": 0,
             "brand_visibility_score": 0
-        }
+        },
+        "sources": [],
+        "web_search_data": {}
     }
     
     api_key = os.getenv("OPENAI_API_KEY")
@@ -79,8 +82,16 @@ def analyze_llm_brand_positioning_streaming(brand_name: str, competitors: List[s
             
             log_progress(f"Asking {model}: \"{query}\"", "query_start", progress, model=model, query=query)
             
-            # Generate LLM response for the query
-            llm_response = get_llm_response_streaming(client, query, model, log_progress)
+            # Generate LLM response for the query with sources
+            llm_response, query_sources = get_llm_response_with_sources_streaming(client, query, model, log_progress)
+            
+            # Add sources to results
+            if query_sources:
+                for source in query_sources:
+                    source["query"] = query
+                    source["model"] = model
+                    source["type"] = "perplexity"
+                analysis_results["sources"].extend(query_sources)
             
             log_progress(f"Analyzing brand positioning in response", "analysis_start", progress, model=model, query=query)
             
@@ -395,9 +406,108 @@ def get_llm_response_streaming(client: OpenAI, query: str, model: str, log_progr
                 print(f"Error getting LLM response after {max_retries} attempts: {e}")
                 return f"Error: Could not get response from {model} after {max_retries} attempts: {str(e)[:100]}"
 
+def get_llm_response_with_sources_streaming(client: OpenAI, query: str, model: str, log_progress=None) -> tuple[str, list]:
+    """
+    Get response from LLM for a given query with web search, sources, and streaming support.
+    
+    Args:
+        client: OpenAI client
+        query: The query to ask
+        model: The model to use
+        log_progress: Progress logging function
+        
+    Returns:
+        tuple: (LLM response, sources list)
+    """
+    max_retries = 3
+    base_delay = 1
+    timeout = 45
+    
+    for attempt in range(max_retries):
+        try:
+            if log_progress:
+                log_progress(f"🔍 Searching web for: \"{query[:50]}{'...' if len(query) > 50 else ''}\"", "web_search_start", None, attempt=attempt+1, max_retries=max_retries)
+            
+            # Try to get web search results using Perplexity for better sources
+            try:
+                web_result = perplexity.webSearchAndAnalyze(query, "")
+                if "sources" in web_result:
+                    if log_progress:
+                        log_progress(f"✅ Web search completed with {len(web_result['sources'])} sources", "web_search_success", None, sources_count=len(web_result['sources']))
+                    return web_result.get("summary", ""), web_result["sources"]
+            except Exception as e:
+                if log_progress:
+                    log_progress(f"⚠️ Web search failed, using direct LLM: {str(e)[:50]}...", "web_search_fallback", None, error=str(e)[:50])
+            
+            # Fallback to OpenAI without web search
+            if log_progress:
+                log_progress(f"🤖 Asking {model} directly...", "llm_direct_start", None)
+            
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "user", "content": query}
+                ],
+                max_tokens=500,
+                temperature=0.7,
+                timeout=timeout
+            )
+            
+            if log_progress:
+                log_progress(f"✅ Got response from {model}", "llm_direct_success", None)
+            
+            return response.choices[0].message.content, []
+            
+        except Exception as e:
+            if attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)  # Exponential backoff
+                if log_progress:
+                    log_progress(f"⚠️ Attempt {attempt + 1} failed for {model}, retrying in {delay}s: {str(e)[:50]}...", "llm_retry", None, attempt=attempt+1, delay=delay, error=str(e)[:50])
+                time.sleep(delay)
+            else:
+                if log_progress:
+                    log_progress(f"❌ Failed to get response from {model} after {max_retries} attempts: {str(e)[:100]}", "llm_error", None, model=model, query=query[:50] + "...", error=str(e)[:100])
+                print(f"Error getting LLM response after {max_retries} attempts: {e}")
+                return f"Error: Could not get response from {model} after {max_retries} attempts: {str(e)[:100]}", []
+
+def get_llm_response_with_sources(client: OpenAI, query: str, model: str) -> tuple[str, list]:
+    """
+    Get response from LLM for a given query with web search and sources.
+    
+    Args:
+        client: OpenAI client
+        query: The query to ask
+        model: The model to use
+        
+    Returns:
+        tuple: (LLM response, sources list)
+    """
+    try:
+        # Try to get web search results using Perplexity for better sources
+        try:
+            web_result = perplexity.webSearchAndAnalyze(query, "")
+            if "sources" in web_result:
+                return web_result.get("summary", ""), web_result["sources"]
+        except Exception as e:
+            print(f"Perplexity search failed, falling back to OpenAI: {e}")
+        
+        # Fallback to OpenAI without web search
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "user", "content": query}
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        return response.choices[0].message.content, []
+    except Exception as e:
+        print(f"Error getting LLM response: {e}")
+        return f"Error: Could not get response from {model}", []
+
 def get_llm_response(client: OpenAI, query: str, model: str) -> str:
     """
-    Get response from LLM for a given query.
+    Get response from LLM for a given query (backward compatibility).
     
     Args:
         client: OpenAI client
@@ -407,19 +517,8 @@ def get_llm_response(client: OpenAI, query: str, model: str) -> str:
     Returns:
         str: The LLM response
     """
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "user", "content": query}
-            ],
-            max_tokens=500,
-            temperature=0.7
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        print(f"Error getting LLM response: {e}")
-        return f"Error: Could not get response from {model}"
+    response, _ = get_llm_response_with_sources(client, query, model)
+    return response
 
 def analyze_brand_in_response_streaming(client: OpenAI, response: str, brand_name: str, competitors: List[str], log_progress=None) -> Dict[str, Any]:
     """
