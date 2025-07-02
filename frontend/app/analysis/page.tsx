@@ -626,10 +626,10 @@ export default function AnalysisPage() {
         <MiniNavbar />
 
         {/* Main content container */}
-        <div className="flex flex-1 flex-col lg:flex-row">
+        <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
           {/* Center content (same spacing as homepage) */}
-          <div className="flex-1 flex flex-col justify-center items-center">
-            <div className="w-full mt-[50px] max-w-4xl px-4">
+          <div className="flex-1 flex flex-col justify-center items-center py-4">
+            <div className="w-full max-w-4xl px-4 h-full flex flex-col justify-center">
         <AnimatePresence mode="wait">
           {step === "brand-details" && (
             <motion.div
@@ -637,18 +637,18 @@ export default function AnalysisPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
+              className="space-y-6"
             >
-              <div className="text-center space-y-4">
-                <h1 className="text-4xl font-bold text-white">
+              <div className="text-center space-y-3">
+                <h1 className="text-3xl font-bold text-white">
                   Tell us about your brand
                 </h1>
-                <p className="text-xl text-gray-400">
+                <p className="text-lg text-gray-400">
                   We'll analyze how your brand appears in AI search results
                 </p>
               </div>
 
-              <form onSubmit={handleBrandSubmit} className="space-y-6 max-w-md mx-auto">
+              <form onSubmit={handleBrandSubmit} className="space-y-4 max-w-md mx-auto">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Brand Name *
@@ -658,7 +658,7 @@ export default function AnalysisPage() {
                     required
                     value={brandData.name}
                     onChange={(e) => setBrandData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0CF2A0] focus:border-transparent"
+                    className="w-full px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0CF2A0] focus:border-transparent"
                     placeholder="e.g., Apple, Tesla, etc."
                   />
                 </div>
@@ -672,7 +672,7 @@ export default function AnalysisPage() {
                     required
                     value={brandData.website}
                     onChange={(e) => setBrandData(prev => ({ ...prev, website: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0CF2A0] focus:border-transparent"
+                    className="w-full px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0CF2A0] focus:border-transparent"
                     placeholder="https://your-website.com"
                   />
                 </div>
@@ -684,7 +684,7 @@ export default function AnalysisPage() {
                   <select
                     value={brandData.country}
                     onChange={(e) => setBrandData(prev => ({ ...prev, country: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#0CF2A0] focus:border-transparent"
+                    className="w-full px-4 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-[#0CF2A0] focus:border-transparent"
                   >
                     <option value="United States">United States</option>
                     <option value="United Kingdom">United Kingdom</option>
@@ -699,7 +699,7 @@ export default function AnalysisPage() {
                 <motion.button
                   type="submit"
                   disabled={!brandData.name || !brandData.website}
-                  className="w-full bg-[#0CF2A0] text-black font-semibold py-3 px-6 rounded-lg hover:bg-opacity-90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0CF2A0] text-black font-semibold py-2 px-6 rounded-lg hover:bg-opacity-90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -751,18 +751,19 @@ export default function AnalysisPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
+              className="h-full flex flex-col"
             >
-              <div className="text-center space-y-4">
-                <h1 className="text-4xl font-bold text-white">
+              <div className="text-center space-y-2 mb-6">
+                <h1 className="text-3xl font-bold text-white">
                   Select Your Competitors
                 </h1>
-                <p className="text-xl text-gray-400">
-                  Choose which companies you want to compare against (we found {brandData.competitors?.length || 0} potential competitors)
+                <p className="text-lg text-gray-400">
+                  Choose which companies you want to compare against ({brandData.competitors?.length || 0} found)
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+              <div className="flex-1 overflow-y-auto pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl mx-auto">
                 {brandData.competitors?.map((competitor, index) => (
                   <motion.div
                     key={competitor.name}
@@ -770,15 +771,15 @@ export default function AnalysisPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     className={cn(
-                      "p-4 rounded-lg border cursor-pointer transition-all duration-200 aspect-square flex flex-col",
+                      "p-3 rounded-lg border cursor-pointer transition-all duration-200 aspect-square flex flex-col min-h-[140px]",
                       selectedCompetitors.includes(competitor.name)
                         ? "border-[#0CF2A0] bg-[#0CF2A0]/10"
                         : "border-gray-700 bg-gray-900 hover:border-gray-600"
                     )}
                     onClick={() => handleCompetitorSelection(competitor.name)}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-semibold text-white text-lg leading-tight">{competitor.name}</h3>
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-white text-base leading-tight">{competitor.name}</h3>
                       <div className={cn(
                         "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0",
                         selectedCompetitors.includes(competitor.name)
@@ -794,27 +795,28 @@ export default function AnalysisPage() {
                     </div>
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <p className="text-sm text-gray-400 mb-2 truncate">{competitor.website}</p>
-                        <p className="text-sm text-gray-500 overflow-hidden" style={{
+                        <p className="text-xs text-gray-400 mb-1 truncate">{competitor.website}</p>
+                        <p className="text-xs text-gray-500 overflow-hidden" style={{
                           display: '-webkit-box',
-                          WebkitLineClamp: 3,
+                          WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical'
                         }}>{competitor.reason}</p>
                       </div>
                     </div>
                   </motion.div>
                 ))}
+                </div>
               </div>
 
-              <div className="text-center pt-8">
+              <div className="text-center pt-4 pb-2">
                 <motion.button
                   onClick={handleGenerateReport}
                   disabled={selectedCompetitors.length === 0}
-                  className="bg-[#0CF2A0] text-black font-semibold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#0CF2A0] text-black font-semibold py-2 px-6 rounded-lg hover:bg-opacity-90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  Generate Report ({selectedCompetitors.length} competitors selected)
+                  Generate Report ({selectedCompetitors.length} selected)
                 </motion.button>
               </div>
             </motion.div>
