@@ -42,6 +42,10 @@ perplexity_key = os.getenv('PERPLEXITY_API_KEY', 'NOT SET')
 print(f"PERPLEXITY_API_KEY: {perplexity_key[:10] if perplexity_key != 'NOT SET' else 'NOT SET'}{'*' * 20 if perplexity_key != 'NOT SET' else ''}")
 convex_url = os.getenv('CONVEX_URL', 'NOT SET')
 print(f"CONVEX_URL: {convex_url[:20] if convex_url != 'NOT SET' else 'NOT SET'}{'*' * 10 if convex_url != 'NOT SET' else ''}")
+smtp_email = os.getenv('SMTP_EMAIL', 'NOT SET')
+print(f"SMTP_EMAIL: {smtp_email[:10] if smtp_email != 'NOT SET' else 'NOT SET'}{'*' * 10 if smtp_email != 'NOT SET' else ''}")
+smtp_password = os.getenv('SMTP_PASSWORD', 'NOT SET')
+print(f"SMTP_PASSWORD: {'SET' if smtp_password != 'NOT SET' else 'NOT SET'}")
 print(f"PROJECT_DIRECTORY: {os.getenv('PROJECT_DIRECTORY', 'NOT SET')}")
 print(f"Current working directory: {os.getcwd()}")
 print(f"OpenAI API key length: {len(api_key) if api_key != 'NOT SET' else 0}")
@@ -313,6 +317,7 @@ def stream_test_queries():
     queries = data.get('queries', [])
     competitors = data.get('competitors', [])
     llm_models = data.get('models', ['gpt-4o-mini-2024-07-18'])
+    session_id = data.get('session_id')  # Add session_id for database saving
     
     def generate():
         try:
@@ -344,6 +349,24 @@ def stream_test_queries():
             yield f"data: {json.dumps({'status': 'Generating optimization suggestions...', 'step': 'suggestions', 'progress': 95})}\n\n"
             suggestions = geo_analysis.get_geo_optimization_suggestions(analysis_results)
             analysis_results["optimization_suggestions"] = suggestions
+            
+            # Save GEO analysis to Convex if available and session_id provided
+            if convex_client and session_id:
+                try:
+                    convex_client.save_geo_analysis(
+                        session_id=session_id,
+                        brand_name=brand_name,
+                        search_queries=query_strings,
+                        competitors=competitors,
+                        llm_models=llm_models,
+                        optimization_suggestions="\n".join(suggestions) if isinstance(suggestions, list) else str(suggestions),
+                        progress_status=100,
+                        analysis_result=analysis_results,
+                        status="completed"
+                    )
+                    print(f"✅ GEO analysis saved to Convex for session {session_id}")
+                except Exception as e:
+                    print(f"❌ Failed to save GEO analysis to Convex: {e}")
             
             yield f"data: {json.dumps({'status': 'GEO Analysis complete!', 'step': 'complete', 'progress': 100, 'result': analysis_results})}\n\n"
             
@@ -517,6 +540,7 @@ def perplexity_generate_queries():
         brand_description = data.get('brandDescription')
         brand_industry = data.get('brandIndustry')
         total_queries = data.get('totalQueries', 10)
+        session_id = data.get('session_id')  # Add session_id for database saving
         
         if not all([brand_name, brand_description, brand_industry]):
             return jsonify({'error': 'brandName, brandDescription, and brandIndustry are required'}), 400
@@ -524,6 +548,24 @@ def perplexity_generate_queries():
         queries = perplexityAnalytics.getCoherentQueries(
             brand_name, brand_country, brand_description, brand_industry, total_queries
         )
+        
+        # Save to database if session_id provided
+        if convex_client and session_id:
+            try:
+                convex_client.save_brand_analysis(
+                    session_id=session_id,
+                    brand_name=brand_name,
+                    brand_website=data.get('brandWebsite'),
+                    brand_country=brand_country,
+                    brand_description=brand_description,
+                    brand_industry=brand_industry,
+                    status="completed",
+                    result_data={'queries': queries, 'source': 'perplexity'}
+                )
+                print(f"✅ Perplexity queries saved to database for session {session_id}")
+            except Exception as e:
+                print(f"❌ Failed to save Perplexity queries: {e}")
+        
         return jsonify({'queries': queries, 'source': 'perplexity'})
     
     except Exception as e:
@@ -535,11 +577,28 @@ def perplexity_web_search():
         data = request.json
         query = data.get('query')
         context = data.get('context', '')
+        session_id = data.get('session_id')  # Add session_id for database saving
         
         if not query:
             return jsonify({'error': 'query is required'}), 400
         
         search_results = perplexityAnalytics.webSearchAndAnalyze(query, context)
+        
+        # Save to database if session_id provided
+        if convex_client and session_id:
+            try:
+                convex_client.save_report(
+                    session_id=session_id,
+                    report_type="geo_analysis",
+                    report_data=search_results,
+                    email_sent=False,
+                    recipient_email="temp@evidentia.app",  # Will be updated when email is collected
+                    brand_name=data.get('brandName', 'Perplexity Search')
+                )
+                print(f"✅ Perplexity search results saved to database for session {session_id}")
+            except Exception as e:
+                print(f"❌ Failed to save Perplexity search results: {e}")
+        
         return jsonify(search_results)
     
     except Exception as e:
@@ -552,6 +611,7 @@ def perplexity_brand_analysis():
         brand_name = data.get('brandName')
         brand_website = data.get('brandWebsite')
         competitors = data.get('competitors', [])
+        session_id = data.get('session_id')  # Add session_id for database saving
         
         if not brand_name or not brand_website:
             return jsonify({'error': 'brandName and brandWebsite are required'}), 400
@@ -559,6 +619,22 @@ def perplexity_brand_analysis():
         analysis_result = perplexityAnalytics.getBrandAnalysis(
             brand_name, brand_website, competitors
         )
+        
+        # Save to database if session_id provided
+        if convex_client and session_id:
+            try:
+                convex_client.save_brand_analysis(
+                    session_id=session_id,
+                    brand_name=brand_name,
+                    brand_website=brand_website,
+                    competitors=competitors,
+                    status="completed",
+                    result_data=analysis_result
+                )
+                print(f"✅ Perplexity brand analysis saved to database for session {session_id}")
+            except Exception as e:
+                print(f"❌ Failed to save Perplexity brand analysis: {e}")
+        
         return jsonify(analysis_result)
     
     except Exception as e:

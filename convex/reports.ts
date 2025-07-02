@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 // Save report history
@@ -12,15 +13,29 @@ export const saveReport = mutation({
     brand_name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("reports", {
-      session_id: args.session_id,
-      report_type: args.report_type,
-      report_data: args.report_data,
-      email_sent: args.email_sent,
-      recipient_email: args.recipient_email,
-      generated_at: Date.now(),
-      brand_name: args.brand_name,
-    });
+    const userId = await getAuthUserId(ctx);
+    
+    // Log authentication status for debugging
+    console.log(`Saving report - User ID: ${userId ? userId : 'ANONYMOUS'}, Session: ${args.session_id}, Type: ${args.report_type}`);
+    
+    try {
+      const newId = await ctx.db.insert("reports", {
+        session_id: args.session_id,
+        user_id: userId || undefined, // undefined for anonymous users
+        report_type: args.report_type,
+        report_data: args.report_data,
+        email_sent: args.email_sent,
+        recipient_email: args.recipient_email,
+        generated_at: Date.now(),
+        brand_name: args.brand_name,
+      });
+      
+      console.log(`✅ Created report for ${userId ? 'authenticated' : 'anonymous'} user - ID: ${newId}`);
+      return newId;
+    } catch (error) {
+      console.error('❌ Failed to save report:', error);
+      throw new Error(`Failed to save report: ${error}`);
+    }
   },
 });
 

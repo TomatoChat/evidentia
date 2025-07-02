@@ -19,6 +19,9 @@ export const saveBrandAnalysis = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     
+    // Log authentication status for debugging
+    console.log(`Saving brand analysis - User ID: ${userId ? userId : 'ANONYMOUS'}, Session: ${args.session_id}`);
+    
     // Check if analysis already exists for this session
     const existingAnalysis = await ctx.db
       .query("brand_analyses")
@@ -27,7 +30,7 @@ export const saveBrandAnalysis = mutation({
     
     const analysisData = {
       session_id: args.session_id,
-      user_id: userId || undefined,
+      user_id: userId || undefined, // undefined for anonymous users
       brand_name: args.brand_name,
       brand_website: args.brand_website,
       brand_country: args.brand_country,
@@ -40,14 +43,22 @@ export const saveBrandAnalysis = mutation({
       sources: args.sources,
     };
     
-    if (existingAnalysis) {
-      // Update existing analysis
-      await ctx.db.patch(existingAnalysis._id, analysisData);
-      return existingAnalysis._id;
+    try {
+      if (existingAnalysis) {
+        // Update existing analysis
+        await ctx.db.patch(existingAnalysis._id, analysisData);
+        console.log(`✅ Updated brand analysis for ${userId ? 'authenticated' : 'anonymous'} user - ID: ${existingAnalysis._id}`);
+        return existingAnalysis._id;
+      }
+      
+      // Create new analysis
+      const newId = await ctx.db.insert("brand_analyses", analysisData);
+      console.log(`✅ Created brand analysis for ${userId ? 'authenticated' : 'anonymous'} user - ID: ${newId}`);
+      return newId;
+    } catch (error) {
+      console.error('❌ Failed to save brand analysis:', error);
+      throw new Error(`Failed to save brand analysis: ${error}`);
     }
-    
-    // Create new analysis
-    return await ctx.db.insert("brand_analyses", analysisData);
   },
 });
 

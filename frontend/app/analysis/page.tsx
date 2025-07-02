@@ -372,22 +372,24 @@ export default function AnalysisPage() {
   // Authentication and database hooks
   const { user, isAuthenticated } = convex ? useCurrentUser() : { user: null, isAuthenticated: false };
   const saveBrandAnalysis = convex ? useMutation(api.brandAnalysis.saveBrandAnalysis) : null;
+  const saveGeoAnalysis = convex ? useMutation(api.geoAnalysis.saveGeoAnalysis) : null;
+  const saveReport = convex ? useMutation(api.reports.saveReport) : null;
   const linkSessionToUser = convex ? useMutation(api.users.linkSessionToUser) : null;
 
-  // Function to save analysis to database when authenticated
+  // Function to save analysis to database (works with or without authentication)
   const saveAnalysisToDatabase = async (sessionId: string, data: any, sources?: Source[]) => {
-    if (!isAuthenticated || !saveBrandAnalysis || !linkSessionToUser) return;
+    if (!saveBrandAnalysis) return;
 
     try {
-      // Link session to authenticated user
-      if (user?.email) {
+      // Link session to authenticated user if logged in
+      if (isAuthenticated && user?.email && linkSessionToUser) {
         await linkSessionToUser({
           session_id: sessionId,
           email: user.email,
         });
       }
 
-      // Save brand analysis
+      // Save brand analysis (works for both authenticated and anonymous users)
       await saveBrandAnalysis({
         session_id: sessionId,
         brand_name: brandData.name,
@@ -400,8 +402,54 @@ export default function AnalysisPage() {
         result_data: data,
         sources: sources,
       });
+      console.log("✅ Brand analysis saved to database successfully");
     } catch (error) {
-      console.error("Failed to save analysis to database:", error);
+      console.error("❌ Failed to save brand analysis to database:", error);
+    }
+  };
+
+  // Function to save GEO analysis to database
+  const saveGeoAnalysisToDatabase = async (sessionId: string, data: any) => {
+    if (!saveGeoAnalysis) return;
+
+    try {
+      // Save GEO analysis (works for both authenticated and anonymous users)
+      await saveGeoAnalysis({
+        session_id: sessionId,
+        brand_name: brandData.name,
+        search_queries: data.queries?.map((q: any) => q.prompt) || [],
+        competitors: selectedCompetitors,
+        llm_models: ["gpt-4o-mini-2024-07-18"],
+        optimization_suggestions: data.analysis?.optimization_suggestions?.join("\n"),
+        progress_status: 100,
+        analysis_result: data,
+        status: "completed" as const,
+      });
+      console.log("✅ GEO analysis saved to database successfully");
+    } catch (error) {
+      console.error("❌ Failed to save GEO analysis to database:", error);
+    }
+  };
+
+  // Function to save report to database
+  const saveReportToDatabase = async (sessionId: string, data: any) => {
+    if (!saveReport) return;
+
+    try {
+      // Save report (works for both authenticated and anonymous users)
+      const userEmail = user?.email || localStorage.getItem("user_email") || "anonymous@evidentia.app";
+      
+      await saveReport({
+        session_id: sessionId,
+        report_type: "combined" as const,
+        report_data: data,
+        email_sent: false,
+        recipient_email: userEmail,
+        brand_name: brandData.name,
+      });
+      console.log("✅ Report saved to database successfully");
+    } catch (error) {
+      console.error("❌ Failed to save report to database:", error);
     }
   };
 
@@ -415,15 +463,17 @@ export default function AnalysisPage() {
     setAnalysisProgress(0);
 
     try {
+      // First, get brand info from website
       const response = await fetch("http://localhost:5000/stream-brand-info", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          website: brandData.website,
           brandName: brandData.name,
-          brandWebsite: brandData.website,
           brandCountry: brandData.country,
+          session_id: localStorage.getItem("evidentia_session_id"),
         }),
       });
 
@@ -525,6 +575,7 @@ export default function AnalysisPage() {
           brandIndustry: brandData.industry,
           brandCountry: brandData.country,
           totalQueries: 10,
+          session_id: localStorage.getItem("evidentia_session_id"),
         }),
       });
 
@@ -590,6 +641,7 @@ export default function AnalysisPage() {
           queries: queries,
           competitors: selectedCompetitors,
           models: ["gpt-4o-mini-2024-07-18"],
+          session_id: localStorage.getItem("evidentia_session_id"),
         }),
       });
 
@@ -632,10 +684,12 @@ export default function AnalysisPage() {
                   setStep("results");
                   setAnalysisProgress(100);
                   
-                  // Save to database if user is authenticated
+                  // Save to database for all users (with or without authentication)
                   const sessionId = localStorage.getItem("evidentia_session_id");
                   if (sessionId) {
                     await saveAnalysisToDatabase(sessionId, finalResult, data.result?.sources);
+                    await saveGeoAnalysisToDatabase(sessionId, finalResult);
+                    await saveReportToDatabase(sessionId, finalResult);
                   }
                 }
               }
@@ -682,8 +736,8 @@ export default function AnalysisPage() {
         {/* Main content container */}
         <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
           {/* Center content (same spacing as homepage) */}
-          <div className="flex-1 flex flex-col justify-center items-center py-4">
-            <div className="w-full max-w-4xl px-4 h-full flex flex-col justify-center">
+          <div className="flex-1 flex flex-col justify-center items-center">
+            <div className="w-full mt-[50px] max-w-4xl px-4 h-full flex flex-col justify-center">
         <AnimatePresence mode="wait">
           {step === "brand-details" && (
             <motion.div
@@ -817,7 +871,7 @@ export default function AnalysisPage() {
               </div>
 
               <div className="flex-1 overflow-y-auto pr-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl mx-auto">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-w-6xl mx-auto">
                 {brandData.competitors?.map((competitor, index) => (
                   <motion.div
                     key={competitor.name}
@@ -825,23 +879,23 @@ export default function AnalysisPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     className={cn(
-                      "p-3 rounded-lg border cursor-pointer transition-all duration-200 aspect-square flex flex-col min-h-[140px]",
+                      "p-2 rounded-lg border cursor-pointer transition-all duration-200 aspect-square flex flex-col min-h-[120px]",
                       selectedCompetitors.includes(competitor.name)
                         ? "border-[#0CF2A0] bg-[#0CF2A0]/10"
                         : "border-gray-700 bg-gray-900 hover:border-gray-600"
                     )}
                     onClick={() => handleCompetitorSelection(competitor.name)}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-white text-base leading-tight">{competitor.name}</h3>
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className="font-semibold text-white text-sm leading-tight">{competitor.name}</h3>
                       <div className={cn(
-                        "w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0",
+                        "w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0",
                         selectedCompetitors.includes(competitor.name)
                           ? "border-[#0CF2A0] bg-[#0CF2A0]"
                           : "border-gray-600"
                       )}>
                         {selectedCompetitors.includes(competitor.name) && (
-                          <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-2.5 h-2.5 text-black" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         )}

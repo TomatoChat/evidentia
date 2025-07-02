@@ -83,3 +83,42 @@ export const deleteSession = mutation({
     return true;
   },
 });
+
+// Get comprehensive session data with all associated records
+export const getSessionData = query({
+  args: { session_id: v.string() },
+  handler: async (ctx, args) => {
+    // Get session info
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_session_id", (q) => q.eq("session_id", args.session_id))
+      .first();
+    
+    // Get brand analyses
+    const brandAnalyses = await ctx.db
+      .query("brand_analyses")
+      .withIndex("by_session_id", (q) => q.eq("session_id", args.session_id))
+      .collect();
+    
+    // Get GEO analyses
+    const geoAnalyses = await ctx.db
+      .query("geo_analyses")
+      .withIndex("by_session_id", (q) => q.eq("session_id", args.session_id))
+      .collect();
+    
+    // Get reports
+    const reports = await ctx.db
+      .query("reports")
+      .withIndex("by_session_id", (q) => q.eq("session_id", args.session_id))
+      .collect();
+    
+    return {
+      session,
+      brandAnalyses,
+      geoAnalyses,
+      reports,
+      totalRecords: brandAnalyses.length + geoAnalyses.length + reports.length,
+      hasData: brandAnalyses.length > 0 || geoAnalyses.length > 0 || reports.length > 0,
+    };
+  },
+});

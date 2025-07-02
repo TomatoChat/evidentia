@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 // Save GEO analysis results
@@ -15,6 +16,11 @@ export const saveGeoAnalysis = mutation({
     status: v.union(v.literal("pending"), v.literal("in_progress"), v.literal("completed"), v.literal("failed")),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    
+    // Log authentication status for debugging
+    console.log(`Saving GEO analysis - User ID: ${userId ? userId : 'ANONYMOUS'}, Session: ${args.session_id}`);
+    
     // Check if GEO analysis already exists for this session
     const existingAnalysis = await ctx.db
       .query("geo_analyses")
@@ -23,6 +29,7 @@ export const saveGeoAnalysis = mutation({
     
     const analysisData = {
       session_id: args.session_id,
+      user_id: userId || undefined, // undefined for anonymous users
       brand_name: args.brand_name,
       search_queries: args.search_queries,
       competitors: args.competitors,
@@ -34,14 +41,22 @@ export const saveGeoAnalysis = mutation({
       completed_at: args.status === "completed" ? Date.now() : undefined,
     };
     
-    if (existingAnalysis) {
-      // Update existing analysis
-      await ctx.db.patch(existingAnalysis._id, analysisData);
-      return existingAnalysis._id;
+    try {
+      if (existingAnalysis) {
+        // Update existing analysis
+        await ctx.db.patch(existingAnalysis._id, analysisData);
+        console.log(`✅ Updated GEO analysis for ${userId ? 'authenticated' : 'anonymous'} user - ID: ${existingAnalysis._id}`);
+        return existingAnalysis._id;
+      }
+      
+      // Create new analysis
+      const newId = await ctx.db.insert("geo_analyses", analysisData);
+      console.log(`✅ Created GEO analysis for ${userId ? 'authenticated' : 'anonymous'} user - ID: ${newId}`);
+      return newId;
+    } catch (error) {
+      console.error('❌ Failed to save GEO analysis:', error);
+      throw new Error(`Failed to save GEO analysis: ${error}`);
     }
-    
-    // Create new analysis
-    return await ctx.db.insert("geo_analyses", analysisData);
   },
 });
 
