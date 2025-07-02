@@ -10,7 +10,7 @@ import json
 
 # Test configuration
 BASE_URL = "http://localhost:5000"
-TEST_EMAIL = "mike@gmail.com"  # Change this to your real email for testing
+TEST_EMAIL = "mikececco2000@gmail.com"  # Change this to your real email for testing
 
 def test_email_sending():
     """Test the complete email sending flow"""
