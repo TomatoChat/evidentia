@@ -22,7 +22,7 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend server
 echo "🔧 Starting Flask API server on port 5000..."
-python server.py &
+source venv/bin/activate && python3 server.py &
 BACKEND_PID=$!
 
 # Wait a moment for backend to start

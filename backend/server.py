@@ -16,9 +16,13 @@ import libs.utils as utils
 import libs.openai as openaiAnalytics
 import libs.geo_analysis as geo_analysis
 import libs.search_analysis as search_analysis
+import libs.email_service as email_service
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
+
+# In-memory storage for user emails (in production, use a database)
+user_emails = {}
 
 # Print environment variables for debugging
 print("=== Environment Variables ===")
@@ -31,6 +35,14 @@ print("=============================")
 
 @app.route('/')
 def index():
+    return render_template('index.html')
+
+@app.route('/manifesto')
+def manifesto():
+    return render_template('manifesto.html')
+
+@app.route('/api')
+def api_info():
     return jsonify({
         'message': 'Evidentia API Server',
         'status': 'running',
@@ -40,6 +52,7 @@ def index():
             '/stream-brand-info',
             '/stream-generate-queries', 
             '/stream-test-queries',
+            '/send-report',
             '/get-llm-models',
             '/health'
         ]
@@ -54,11 +67,18 @@ def collect_email():
         if not email:
             return jsonify({'error': 'Email is required'}), 400
         
-        # Here you can store the email to a database or file
-        # For now, we'll just log it
-        print(f"Collected email: {email}")
+        # Generate a simple session ID and store the email
+        import uuid
+        session_id = str(uuid.uuid4())
+        user_emails[session_id] = email
         
-        return jsonify({'success': True, 'message': 'Email collected successfully'})
+        print(f"Collected email: {email} with session ID: {session_id}")
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Email collected successfully',
+            'session_id': session_id
+        })
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -356,6 +376,45 @@ def format_query_analysis():
         
         formatted_analysis = utils.formatQueryAnalysis(raw_analysis)
         return jsonify({'formatted_analysis': formatted_analysis})
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/send-report', methods=['POST'])
+def send_report():
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        brand_name = data.get('brandName', 'Your Brand')
+        analysis_result = data.get('analysisResult', {})
+        
+        if not session_id:
+            return jsonify({'error': 'Session ID is required'}), 400
+        
+        if not analysis_result:
+            return jsonify({'error': 'Analysis result is required'}), 400
+        
+        # Get the email for this session
+        recipient_email = user_emails.get(session_id)
+        if not recipient_email:
+            return jsonify({'error': 'Email not found for this session'}), 400
+        
+        # Send the email
+        success = email_service.send_report_email(
+            recipient_email=recipient_email,
+            brand_name=brand_name,
+            analysis_result=analysis_result
+        )
+        
+        if success:
+            # Clean up the session after successful send
+            del user_emails[session_id]
+            return jsonify({
+                'success': True, 
+                'message': f'Report sent successfully to {recipient_email}'
+            })
+        else:
+            return jsonify({'error': 'Failed to send email'}), 500
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500

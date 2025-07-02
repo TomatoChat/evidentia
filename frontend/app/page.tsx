@@ -376,15 +376,21 @@ export const SignInPage = ({ className }: SignInPageProps) => {
     if (email && !isSubmitting) {
       setIsSubmitting(true);
       
-      // Collect email on backend
+      // Collect email on backend and get session ID
       try {
-        await fetch("http://localhost:5000/collect-email", {
+        const response = await fetch("http://localhost:5000/collect-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ email }),
         });
+        
+        const data = await response.json();
+        if (data.session_id) {
+          // Store session ID in localStorage for the analysis page
+          localStorage.setItem("evidentia_session_id", data.session_id);
+        }
       } catch (error) {
         console.error("Failed to collect email:", error);
       }

@@ -56,7 +56,7 @@ export function MiniNavbar() {
   );
 
   const navLinksData = [
-    { label: 'Manifesto', href: '#1' },
+    { label: 'Manifesto', href: '/manifesto' },
     { label: 'Careers', href: '#2' },
     { label: 'Discover', href: '#3' },
   ];

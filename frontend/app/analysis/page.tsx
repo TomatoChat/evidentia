@@ -917,20 +917,47 @@ export default function AnalysisPage() {
 
                 <div className="mt-8 text-center">
                   <motion.button
-                    onClick={() => {
-                      const dataStr = JSON.stringify(analysisResult, null, 2);
-                      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                      const url = URL.createObjectURL(dataBlob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `${brandData.name.toLowerCase().replace(/\s+/g, '-')}-ai-search-report.json`;
-                      link.click();
+                    onClick={async () => {
+                      const sessionId = localStorage.getItem("evidentia_session_id");
+                      if (!sessionId) {
+                        alert("Session expired. Please start over.");
+                        return;
+                      }
+                      
+                      try {
+                        setIsLoading(true);
+                        const response = await fetch("http://localhost:5000/send-report", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            session_id: sessionId,
+                            brandName: brandData.name,
+                            analysisResult: analysisResult,
+                          }),
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                          alert("✅ Report sent to your email successfully!");
+                          localStorage.removeItem("evidentia_session_id");
+                        } else {
+                          alert("❌ Failed to send report: " + (data.error || "Unknown error"));
+                        }
+                      } catch (error) {
+                        console.error("Failed to send report:", error);
+                        alert("❌ Failed to send report. Please try again.");
+                      } finally {
+                        setIsLoading(false);
+                      }
                     }}
-                    className="bg-[#0CF2A0] text-black font-semibold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors duration-200"
+                    disabled={isLoading}
+                    className="bg-[#0CF2A0] text-black font-semibold py-3 px-8 rounded-lg hover:bg-opacity-90 transition-colors duration-200 disabled:opacity-50"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    Download Full Report
+                    {isLoading ? "Sending..." : "📧 Send Report to Email"}
                   </motion.button>
                 </div>
               </div>
