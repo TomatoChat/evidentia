@@ -5,7 +5,7 @@
 echo "🚀 Starting Evidentia Development Servers..."
 
 # Check if we're in the right directory
-if [ ! -f "server.py" ]; then
+if [ ! -f "backend/server.py" ]; then
     echo "❌ Error: Please run this script from the project root directory"
     exit 1
 fi
@@ -22,7 +22,7 @@ trap cleanup SIGINT SIGTERM
 
 # Start backend server
 echo "🔧 Starting Flask API server on port 5000..."
-source venv/bin/activate && python3 server.py &
+source venv/bin/activate && cd backend && python3 server.py &
 BACKEND_PID=$!
 
 # Wait a moment for backend to start
