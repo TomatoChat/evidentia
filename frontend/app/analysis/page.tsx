@@ -470,7 +470,7 @@ export default function AnalysisPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          website: brandData.website,
+          brandWebsite: brandData.website,
           brandName: brandData.name,
           brandCountry: brandData.country,
           session_id: localStorage.getItem("evidentia_session_id"),

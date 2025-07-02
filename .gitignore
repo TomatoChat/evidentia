@@ -248,3 +248,6 @@ config/secrets.json
 # Temporary files
 *.tmp
 *.temp
+
+CLAUDE.md
+.cursorrules
