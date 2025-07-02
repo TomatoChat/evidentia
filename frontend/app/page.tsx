@@ -505,10 +505,9 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                         animate="visible"
                         className="text-4xl sm:text-5xl lg:text-[64px] font-semibold text-white leading-tight max-w-4xl mb-4"
                       >
-                        Deliver collaborative<br />{' '}
                         <span className="inline-block h-[1.2em] sm:h-[1.2em] lg:h-[1.2em] overflow-hidden align-bottom">
                           <RotatingText
-                            texts={['Support', 'Experiences', 'Relationships', 'Help', 'Service']}
+                            texts={['Understand', 'Shape', 'Grow', 'Win']}
                             mainClassName="text-[#0CF2A0] mx-1"
                             staggerFrom="last"
                             initial={{ y: "-100%", opacity: 0 }}
@@ -521,10 +520,14 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                             auto={true}
                             loop={true}
                           />
+                          
                         </span>
+                        <br />
+                        AI Search{' '}
                       </motion.h1>
                       <p className="text-base sm:text-lg lg:text-xl text-gray-400 max-w-2xl mx-auto">
-                        Win AI Search
+                      Generative AI is shaping brand discovery.
+                      Evidentia ensures your brand leads the conversation.
                       </p>
                     </div>
                     
