@@ -6,8 +6,10 @@ from openai import OpenAI
 import libs.openai as openaiAnalytics
 import json
 
+# Get the absolute path to the backend directory
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-with open('utils/countryLanguage.json', 'r', encoding='utf-8') as file:
+with open(os.path.join(backend_dir, 'utils/countryLanguage.json'), 'r', encoding='utf-8') as file:
     countryLanguages = json.load(file)
 
 
@@ -29,7 +31,8 @@ def translateString(stringToTranslate: str, targetLanguage: str) -> str:
     llmClient = OpenAI(api_key=api_key)
 
     # Load the translation prompt template from file
-    with open("prompts/translateString.txt", "r", encoding="utf-8") as file:
+    project_dir = os.path.dirname(backend_dir)
+    with open(os.path.join(project_dir, "prompts/translateString.txt"), "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
     # Format the prompt with the string to translate and the target language
@@ -67,7 +70,8 @@ def getBrandDescription(clientOpenai, brandName: str, brandWebsite: str, brandCo
         str: The company description, translated if necessary.
     """
     # Load the brand description prompt template from file
-    with open("prompts/brandDescription.txt", "r", encoding="utf-8") as file:
+    project_dir = os.path.dirname(backend_dir)
+    with open(os.path.join(project_dir, "prompts/brandDescription.txt"), "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
     # Format the prompt with the provided brand information
@@ -155,7 +159,8 @@ def getBrandIndustry(clientOpenai, brandName: str, brandWebsite: str, brandDescr
         str: The company industry as determined by the LLM, translated if necessary.
     """
     # Load the brand industry prompt template from file
-    with open("prompts/brandIndustry.txt", "r", encoding="utf-8") as file:
+    project_dir = os.path.dirname(backend_dir)
+    with open(os.path.join(project_dir, "prompts/brandIndustry.txt"), "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
     # Format the prompt with the provided brand information
@@ -214,7 +219,8 @@ def getBrandCompetitors(clientOpenai, brandName: str, brandWebsite: str, brandDe
         dict: A dictionary containing the competitors, parsed from the JSON response.
     """
     # Load the brand competitors prompt template from file
-    with open("prompts/brandCompetitors.txt", "r", encoding="utf-8") as file:
+    project_dir = os.path.dirname(backend_dir)
+    with open(os.path.join(project_dir, "prompts/brandCompetitors.txt"), "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
     # Format the prompt with the provided brand information
@@ -320,7 +326,8 @@ def getBrandName(clientOpenai, brandDescription: str) -> str:
         str: The company name as determined by the LLM.
     """
     # Load the brand name prompt template from file
-    with open("prompts/brandName.txt", "r", encoding="utf-8") as file:
+    project_dir = os.path.dirname(backend_dir)
+    with open(os.path.join(project_dir, "prompts/brandName.txt"), "r", encoding="utf-8") as file:
         promptTemplate = file.read()
 
     # Format the prompt with the provided brand description

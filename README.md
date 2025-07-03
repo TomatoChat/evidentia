@@ -1,116 +1,96 @@
 # Evidentia - Generative Engine Optimization (GEO) Tool
 
-🤖 A comprehensive GEO analysis platform that helps brands understand their positioning in LLM responses and optimize for generative AI engines.
+🤖 A modern full-stack GEO analysis platform with React frontend and Flask API backend that helps brands understand their positioning in LLM responses.
+
+## Architecture
+
+- **Frontend**: Modern React/Next.js app with Tailwind CSS
+- **Backend**: Flask API server with streaming capabilities  
+- **Deployment**: Frontend ready for Vercel, backend for any Python hosting
 
 ## What is GEO?
 
-**Generative Engine Optimization (GEO)** is the practice of optimizing content and brand positioning for Large Language Models (LLMs) and AI-powered responses, rather than traditional search engines. As users increasingly rely on AI assistants for recommendations and information, GEO becomes crucial for brand visibility.
+**Generative Engine Optimization (GEO)** is the practice of optimizing content and brand positioning for Large Language Models (LLMs) and AI-powered responses, rather than traditional search engines.
 
-## 🚀 Key Features
+## ⚡ Quick Start (One Command!)
+
+```bash
+# Install everything and start both servers
+npm run install:all && npm run dev
+```
+
+This will:
+- Install Python backend dependencies
+- Install Node.js frontend dependencies  
+- Start Flask API server on port 5000
+- Start React frontend on port 3000
+
+## 🚀 Individual Commands
+
+### Development
+```bash
+# Start both frontend and backend
+npm run dev
+
+# Or start individually:
+npm run start:backend    # Flask API (port 5000)
+npm run start:frontend   # React app (port 3000)
+```
+
+### Installation
+```bash
+npm run install:all      # Install both frontend and backend deps
+npm run install:backend  # Python dependencies only
+npm run install:frontend # Node.js dependencies only
+```
+
+### Production
+```bash
+npm run build:frontend   # Build for production
+npm run start:prod       # Start production build
+```
+
+## 📁 Project Structure
+
+```
+evidentia/
+├── frontend/              # 🌐 React/Next.js Frontend
+│   ├── app/              # Next.js 13+ app directory
+│   ├── components/       # React components
+│   ├── package.json      # Frontend dependencies
+│   └── tailwind.config.js
+├── libs/                 # 🧠 Core analysis libraries
+│   ├── geo_analysis.py   # GEO analysis engine
+│   ├── openai.py        # OpenAI API integration
+│   └── utils.py         # Brand analysis utilities
+├── server.py            # 🔌 Flask API server
+├── requirements.txt     # Python dependencies
+├── package.json         # Root project scripts
+└── start-dev.sh         # Development startup script
+```
+
+## 🎯 Features
 
 ### Core Analysis Capabilities
-- **🧠 Advanced LLM Brand Analysis**: Comprehensive analysis of how your brand appears across multiple AI models
-- **📊 Multi-Model GEO Testing**: Test brand positioning across GPT-4, GPT-3.5, and other LLM models simultaneously
-- **💭 Intelligent Query Generation**: AI-powered generation of test queries tailored to your industry and brand
-- **🎯 Sentiment & Positioning Analysis**: Deep understanding of how AI portrays your brand (positive/neutral/negative)
-- **🥊 Competitive Intelligence**: Advanced competitor analysis and positioning comparison
-- **📈 Performance Metrics**: Comprehensive metrics including mention rates, positioning scores, and visibility analytics
-- **🔍 Real-Time Web Search**: OpenAI Responses API integration with web search capabilities for current market intelligence
+- **🧠 Advanced LLM Brand Analysis**: Multi-model AI analysis
+- **📊 Multi-Model GEO Testing**: Test across GPT-4, GPT-3.5, etc.
+- **💭 Intelligent Query Generation**: AI-powered test queries
+- **🎯 Sentiment & Positioning Analysis**: Brand sentiment scoring
+- **🥊 Competitive Intelligence**: Competitor analysis
+- **📈 Performance Metrics**: Comprehensive analytics
 
-### Real-Time Experience
-- **⚡ Real-time Streaming Analysis**: Watch analysis progress with live updates and detailed logs
-- **📱 Interactive Web Interface**: Modern, responsive UI with progress tracking and detailed visualizations
-- **🔄 Streaming Progress Updates**: Real-time status updates with color-coded progress indicators
-- **📋 Detailed Analysis Reports**: Comprehensive reports with actionable insights
+### Modern Frontend
+- **⚡ Two-step Landing Page**: Email collection → Brand analysis
+- **📱 Responsive Design**: Works on all devices
+- **🎨 Modern UI**: Tailwind CSS with gradient backgrounds
+- **🔄 Real-time Updates**: Streaming API responses
+- **🚀 Ready for Vercel**: Optimized for deployment
 
-### Advanced Capabilities
-- **🎯 Smart Optimization Suggestions**: AI-generated recommendations for improving GEO performance
-- **🌍 Geographic Market Analysis**: Country-specific brand analysis and market positioning
-- **🔍 Query Performance Insights**: Detailed analysis of individual query performance
-- **📊 Brand Visibility Scoring**: Proprietary scoring system for brand visibility in AI responses
-- **🤖 Multi-LLM Testing Framework**: Support for testing across different AI models and providers
-
-## Prerequisites
-
-- Python 3.11 or higher
-- OpenAI API key
-
-## Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd evidentia
-   ```
-
-2. **Create and activate virtual environment**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your API keys:
-   ```
-   OPENAI_API_KEY=your_openai_api_key_here
-   PROJECT_DIRECTORY=/path/to/your/evidentia/directory
-   
-   # Optional - for real Google search results (100 free searches/month)
-   SERPAPI_KEY=your_serpapi_key_here
-   ```
-
-## 🎯 Usage
-
-### 🌐 Interactive Web Interface
-
-1. **Start the server**
-   ```bash
-   source venv/bin/activate
-   python server.py
-   ```
-
-2. **Open your browser**
-   Navigate to `http://127.0.0.1:5000`
-
-3. **Complete GEO Analysis Workflow**
-
-   **Step 1: Brand Discovery & Analysis**
-   - Enter brand name (e.g., "jethr")
-   - Enter brand website (e.g., "jethr.com")
-   - Optionally specify country (defaults to "world")
-   - Click "🚀 Analyze Brand" to get comprehensive company information
-   - Watch real-time progress with streaming updates
-
-   **Step 2: Intelligent Query Generation**
-   - Adjust the number of test queries (1-100)
-   - Click "📝 Generate Queries" to create AI-optimized test queries
-   - Review generated queries tailored to your industry and brand positioning
-
-   **Step 3: Advanced GEO Testing & Rankings**
-   - Select LLM models to test (GPT-4, GPT-3.5, etc.)
-   - Click "🌍 Test Queries & Rankings" to start comprehensive GEO analysis
-   - Monitor real-time analysis progress with detailed streaming logs
-   - Review comprehensive results including:
-     - Brand mention rates across different AI models
-     - Sentiment analysis and positioning insights
-     - Competitor analysis and market positioning
-     - Optimization suggestions for improved GEO performance
-
-### 📊 Real-Time Analysis Features
-
-- **Live Progress Tracking**: Watch each step of the analysis with color-coded progress indicators
-- **Streaming Logs**: Detailed real-time logs showing LLM requests, responses, and analysis steps
-- **Interactive Results**: Comprehensive results with expandable sections and detailed metrics
-- **Multi-Model Comparison**: Side-by-side comparison of brand performance across different AI models
+### API Backend
+- **🔌 RESTful API**: Clean API endpoints
+- **📡 Streaming Support**: Real-time progress updates
+- **🌐 CORS Enabled**: Frontend-backend separation
+- **⚡ Fast Responses**: Optimized performance
 
 ### 🔌 API Endpoints
 

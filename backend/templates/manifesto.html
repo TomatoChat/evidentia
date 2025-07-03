@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidentia - Manifesto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 30px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .scroll-container {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 40px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .cards-wrapper {
+            display: flex;
+            gap: 40px;
+            padding: 0 40px;
+            min-width: max-content;
+        }
+
+        .manifesto-card {
+            min-width: 400px;
+            max-width: 400px;
+            height: calc(100vh - 200px);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .manifesto-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .card-icon {
+            font-size: 4rem;
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+
+        .card-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(45deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            text-align: center;
+            opacity: 0.9;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-quote {
+            font-style: italic;
+            font-size: 1.3rem;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: white;
+            transform: scale(1.2);
+        }
+
+        .back-link {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            color: white;
+            text-decoration: none;
+            font-size: 1.1rem;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Custom scrollbar */
+        .scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .scroll-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .manifesto-card {
+                min-width: 320px;
+                max-width: 320px;
+                padding: 30px;
+            }
+            
+            .cards-wrapper {
+                padding: 0 20px;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-link">← Back to Research Tool</a>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Evidentia Manifesto</h1>
+            <p>Our vision for the future of brand research and digital evidence</p>
+        </div>
+
+        <div class="scroll-container" id="scrollContainer">
+            <div class="cards-wrapper">
+                <!-- Card 1: Vision -->
+                <div class="manifesto-card">
+                    <div class="card-icon">🌟</div>
+                    <div class="card-title">Our Vision</div>
+                    <div class="card-content">
+                        <div>
+                            <p>We envision a world where every brand decision is backed by intelligent, real-time evidence. Where marketing strategies are not based on assumptions, but on deep understanding of how brands truly position in the digital landscape.</p>
+                            <div class="card-quote">
+                                "Evidence is the foundation of truth, and truth is the foundation of great brands."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Mission -->
+                <div class="manifesto-card">
+                    <div class="card-icon">🎯</div>
+                    <div class="card-title">Our Mission</div>
+                    <div class="card-content">
+                        <div>
+                            <p>To democratize advanced brand intelligence by making sophisticated AI-powered research tools accessible to businesses of all sizes. We break down the barriers between complex data and actionable insights.</p>
+                            <div class="card-quote">
+                                "Intelligence should not be a privilege of the few, but a right of every brand builder."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Innovation -->
+                <div class="manifesto-card">
+                    <div class="card-icon">⚡</div>
+                    <div class="card-title">Innovation First</div>
+                    <div class="card-content">
+                        <div>
+                            <p>We push the boundaries of what's possible in brand research. By combining cutting-edge AI, real-time analysis, and intuitive design, we transform how businesses understand their competitive landscape.</p>
+                            <div class="card-quote">
+                                "Innovation is not about adding features, it's about solving problems that didn't know they had solutions."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Transparency -->
+                <div class="manifesto-card">
+                    <div class="card-icon">🔬</div>
+                    <div class="card-title">Radical Transparency</div>
+                    <div class="card-content">
+                        <div>
+                            <p>Every insight we provide comes with clear methodology and traceable sources. We believe in showing not just what we found, but how we found it, empowering users to understand and trust the evidence.</p>
+                            <div class="card-quote">
+                                "Transparency is not just about being open, it's about being accountable for every insight we deliver."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 5: Empowerment -->
+                <div class="manifesto-card">
+                    <div class="card-icon">🚀</div>
+                    <div class="card-title">Empower Decision Makers</div>
+                    <div class="card-content">
+                        <div>
+                            <p>We don't just provide data; we provide confidence. Our tools transform uncertainty into clarity, helping decision-makers move from "I think" to "I know" when it comes to brand positioning and strategy.</p>
+                            <div class="card-quote">
+                                "The best tool is one that makes its user feel more powerful, not more dependent."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 6: Future -->
+                <div class="manifesto-card">
+                    <div class="card-icon">🌍</div>
+                    <div class="card-title">Building Tomorrow</div>
+                    <div class="card-content">
+                        <div>
+                            <p>We're not just building a research tool; we're building the foundation for the next generation of brand intelligence. Every feature, every algorithm, every design choice is made with the future in mind.</p>
+                            <div class="card-quote">
+                                "Today's impossibility is tomorrow's breakthrough. We build for the tomorrow we want to see."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 7: Community -->
+                <div class="manifesto-card">
+                    <div class="card-icon">🤝</div>
+                    <div class="card-title">Community Driven</div>
+                    <div class="card-content">
+                        <div>
+                            <p>The best insights come from collective intelligence. We build tools that not only serve individual users but contribute to a larger ecosystem of knowledge sharing and collaborative discovery.</p>
+                            <div class="card-quote">
+                                "Alone we can do so little; together we can revolutionize how the world understands brands."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation" id="navigation">
+            <!-- Navigation dots will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Generate navigation dots
+        const cards = document.querySelectorAll('.manifesto-card');
+        const navigation = document.getElementById('navigation');
+        const scrollContainer = document.getElementById('scrollContainer');
+
+        cards.forEach((_, index) => {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot';
+            if (index === 0) dot.classList.add('active');
+            
+            dot.addEventListener('click', () => {
+                const card = cards[index];
+                const cardRect = card.getBoundingClientRect();
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const scrollLeft = scrollContainer.scrollLeft;
+                const targetScroll = scrollLeft + cardRect.left - containerRect.left - (containerRect.width - cardRect.width) / 2;
+                
+                scrollContainer.scrollTo({
+                    left: targetScroll,
+                    behavior: 'smooth'
+                });
+            });
+            
+            navigation.appendChild(dot);
+        });
+
+        // Update active dot on scroll
+        scrollContainer.addEventListener('scroll', () => {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const containerCenter = containerRect.left + containerRect.width / 2;
+            
+            let activeIndex = 0;
+            let minDistance = Infinity;
+            
+            cards.forEach((card, index) => {
+                const cardRect = card.getBoundingClientRect();
+                const cardCenter = cardRect.left + cardRect.width / 2;
+                const distance = Math.abs(cardCenter - containerCenter);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    activeIndex = index;
+                }
+            });
+            
+            // Update navigation dots
+            document.querySelectorAll('.nav-dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index === activeIndex);
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                const currentActive = document.querySelector('.nav-dot.active');
+                const currentIndex = Array.from(navigation.children).indexOf(currentActive);
+                let newIndex;
+                
+                if (e.key === 'ArrowLeft') {
+                    newIndex = Math.max(0, currentIndex - 1);
+                } else {
+                    newIndex = Math.min(cards.length - 1, currentIndex + 1);
+                }
+                
+                navigation.children[newIndex].click();
+            }
+        });
+
+        // Touch/swipe support for mobile
+        let startX = 0;
+        let scrollLeft = 0;
+
+        scrollContainer.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].pageX - scrollContainer.offsetLeft;
+            scrollLeft = scrollContainer.scrollLeft;
+        });
+
+        scrollContainer.addEventListener('touchmove', (e) => {
+            if (!startX) return;
+            e.preventDefault();
+            const x = e.touches[0].pageX - scrollContainer.offsetLeft;
+            const walk = (x - startX) * 2;
+            scrollContainer.scrollLeft = scrollLeft - walk;
+        });
+
+        scrollContainer.addEventListener('touchend', () => {
+            startX = 0;
+        });
+    </script>
+</body>
+</html> 

@@ -4,8 +4,10 @@ from langchain.prompts import PromptTemplate
 from openai import OpenAI
 import logging
 
+# Get the absolute path to the backend directory
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-with open('utils/countryLanguage.json', 'r', encoding='utf-8') as file:
+with open(os.path.join(backend_dir, 'utils/countryLanguage.json'), 'r', encoding='utf-8') as file:
     countryLanguages = json.load(file)
 
 
@@ -59,7 +61,8 @@ def getCoherentQueries(brandName: str, brandCountry: str, brandDescription: str,
 
     try:
         # Load the prompt template for generating queries from file
-        with open("prompts/brandPromptsGeneration.txt", "r", encoding="utf-8") as file:
+        project_dir = os.path.dirname(backend_dir)
+        with open(os.path.join(project_dir, "prompts/brandPromptsGeneration.txt"), "r", encoding="utf-8") as file:
             promptTemplate = file.read()
 
         # Format the prompt with the provided brand information and total queries

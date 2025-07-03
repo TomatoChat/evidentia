@@ -10,9 +10,11 @@ cachetools==5.5.2
 certifi==2025.6.15
 charset-normalizer==3.4.2
 click==8.2.1
+convex==0.7.0
 dataclasses-json==0.6.7
 distro==1.9.0
 Flask==3.1.1
+Flask-CORS==6.0.1
 frozenlist==1.7.0
 google-api-core==2.25.1
 google-api-python-client==2.173.0
@@ -60,6 +62,7 @@ pyparsing==3.2.3
 python-dotenv==1.1.1
 PyYAML==6.0.2
 regex==2024.11.6
+reportlab==4.2.5
 requests==2.32.4
 requests-toolbelt==1.0.0
 rsa==4.9.1

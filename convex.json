@@ -1,0 +1,6 @@
+{
+  "generateCommonJSApi": true,
+  "node": {
+    "package": "package.json"
+  }
+}
